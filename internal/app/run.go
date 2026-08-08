@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -16,6 +17,12 @@ import (
 )
 
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
+	listener, err := net.Listen("tcp", cfg.HTTPAddr)
+	if err != nil {
+		return errors.New("listen http server")
+	}
+	defer listener.Close()
+
 	pool, err := pgxpool.New(ctx, cfg.PostgresDSN)
 	if err != nil {
 		return errors.New("create postgres client")
@@ -50,9 +57,13 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	return serve(ctx, server, listener, cfg.ShutdownTimeout)
+}
+
+func serve(ctx context.Context, server *http.Server, listener net.Listener, shutdownTimeout time.Duration) error {
 	serverErrors := make(chan error, 1)
 	go func() {
-		serverErrors <- server.ListenAndServe()
+		serverErrors <- server.Serve(listener)
 	}()
 
 	select {
@@ -62,8 +73,17 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		}
 		return err
 	case <-ctx.Done():
-		shutdownContext, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+		shutdownContext, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
-		return server.Shutdown(shutdownContext)
+
+		shutdownErr := server.Shutdown(shutdownContext)
+		serverErr := <-serverErrors
+		if shutdownErr != nil {
+			return shutdownErr
+		}
+		if errors.Is(serverErr, http.ErrServerClosed) {
+			return nil
+		}
+		return serverErr
 	}
 }
