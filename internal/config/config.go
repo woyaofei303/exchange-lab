@@ -74,8 +74,11 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	parsedNATS, err := url.Parse(natsURL)
-	if err != nil || parsedNATS.Scheme != "nats" || parsedNATS.Host == "" {
+	if err != nil || parsedNATS.Scheme != "nats" {
 		return Config{}, fmt.Errorf("NATS_URL must use nats scheme")
+	}
+	if parsedNATS.Opaque != "" || parsedNATS.Hostname() == "" || !validOptionalURLPort(parsedNATS) {
+		return Config{}, fmt.Errorf("NATS_URL is invalid")
 	}
 
 	dependencyTimeout, err := readDuration(read, "DEPENDENCY_TIMEOUT")

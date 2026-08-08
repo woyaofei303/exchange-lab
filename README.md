@@ -78,21 +78,21 @@ Week 1 只建立本地基础设施、连接生命周期和可观测就绪语义�
 
 - 用途：PostgreSQL 是后续交易域持久数据的主存储；API 使用 `pgxpool` 管理连接并执行 `/readyz` 的 `Ping`。
 - 数据所有权：数据库数据归 PostgreSQL 服务所有，保存在 `postgres_data` 命名卷；API 不复制或暗中迁移所有权。
-- 失败模式：连接不可用或配置不兼容时 API 进程仍可存活，`/healthz` 返回 `200`，`/readyz` 将 `postgres` 标为 `error` 并返回 `503`；对外响应和日志不包含 DSN 或底层秘密。
+- 失败模式：启动时 DSN 结构无效或与 pgx 不兼容，API 会以固定脱敏配置错误拒绝启动；配置有效但运行时 PostgreSQL 不可用时，API 进程仍存活，`/healthz` 返回 `200`，`/readyz` 将 `postgres` 标为 `error` 并返回 `503`。
 - 回滚路径：回退 API/pgx 或 PostgreSQL 镜像版本时默认保留 `postgres_data`，先做兼容性验证或备份；日常回滚只用 `docker compose down`，不得用 `--volumes`，除非明确接受销毁数据。
 
 ### Redis + go-redis
 
 - 用途：Redis 为后续短生命周期缓存和协调状态提供服务；API 使用 `go-redis`，并通过 `PING` 暴露就绪状态。
 - 数据所有权：Redis/AOF 数据归 Redis 服务所有，保存在 `redis_data` 命名卷；Week 1 不把 Redis 当作 PostgreSQL 的权威副本。
-- 失败模式：Redis 不可用时 `/healthz` 仍返回 `200`，`/readyz` 仅将 `redis` 标为 `error` 并返回 `503`；恢复后无需重启 API 即可重新就绪。
+- 失败模式：启动时 `REDIS_ADDR` 无效，API 会以固定脱敏配置错误拒绝启动；配置有效但运行时 Redis 不可用时，`/healthz` 仍返回 `200`，`/readyz` 仅将 `redis` 标为 `error` 并返回 `503`；恢复后无需重启 API 即可重新就绪。
 - 回滚路径：回退 API/go-redis 或 Redis 镜像时默认保留 `redis_data`；若缓存格式不兼容，先停用相关功能或做受控清理，不以删除全部 Compose 数据卷作为默认手段。
 
 ### NATS JetStream + nats.go
 
 - 用途：NATS JetStream 为后续事件传递和耐久消息提供基础；API 使用 `nats.go`，就绪检查读取 JetStream account 信息。
 - 数据所有权：JetStream 持久消息归 NATS 服务所有，保存在 `nats_data` 命名卷；Week 1 尚未创建业务 stream 或发布交易事件。
-- 失败模式：NATS 在 API 冷启动时不可用不会终止进程；客户端以有界间隔无限重连，`/healthz` 返回 `200`，`/readyz` 仅将 `nats` 标为 `error` 并返回 `503`，连接恢复后自动返回就绪。
+- 失败模式：启动时 `NATS_URL` 结构无效，API 会以固定脱敏配置错误拒绝启动；配置有效但 NATS 在 API 冷启动时不可用不会终止进程，客户端以有界间隔无限重连，`/healthz` 返回 `200`，`/readyz` 仅将 `nats` 标为 `error` 并返回 `503`，连接恢复后自动返回就绪。
 - 回滚路径：回退 API/nats.go 或 NATS 镜像时默认保留 `nats_data`，先验证 JetStream 存储兼容性；不得把 `docker compose down --volumes` 当作普通回滚步骤。
 
 ## Shutdown and Reset

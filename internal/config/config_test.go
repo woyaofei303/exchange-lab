@@ -188,3 +188,68 @@ func TestLoadDoesNotLeakInvalidPostgresOrRedisValues(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadPreservesAcceptedNATSURLs(t *testing.T) {
+	tests := []struct {
+		name    string
+		natsURL string
+	}{
+		{name: "default port omitted", natsURL: "nats://nats"},
+		{name: "default port explicit", natsURL: "nats://nats:4222"},
+		{name: "minimum port", natsURL: "nats://nats:1"},
+		{name: "maximum port", natsURL: "nats://nats:65535"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values := validValues()
+			values["NATS_URL"] = tt.natsURL
+			cfg, err := config.Load(lookup(values))
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if cfg.NATSURL != tt.natsURL {
+				t.Fatal("Load() changed the accepted NATS_URL")
+			}
+		})
+	}
+}
+
+func TestLoadRejectsStructurallyInvalidNATSURLs(t *testing.T) {
+	tests := []struct {
+		name    string
+		natsURL string
+	}{
+		{name: "scheme only", natsURL: "nats://"},
+		{name: "opaque URL", natsURL: "nats:server"},
+		{name: "empty hostname", natsURL: "nats://:4222"},
+		{name: "empty port", natsURL: "nats://nats:"},
+		{name: "zero port", natsURL: "nats://nats:0"},
+		{name: "out of range port", natsURL: "nats://nats:65536"},
+		{name: "non-numeric port", natsURL: "nats://nats:not-a-port"},
+		{name: "malformed port", natsURL: "nats://nats:12:34"},
+		{name: "malformed IPv6 host", natsURL: "nats://[::1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values := validValues()
+			values["NATS_URL"] = tt.natsURL
+			if _, err := config.Load(lookup(values)); err == nil {
+				t.Fatal("Load() error = nil")
+			}
+		})
+	}
+}
+
+func TestLoadDoesNotLeakInvalidNATSURL(t *testing.T) {
+	const secret = "nats-url-secret"
+	values := validValues()
+	values["NATS_URL"] = "nats://probe:" + secret + "@:0"
+
+	_, err := config.Load(lookup(values))
+	if err == nil {
+		t.Fatal("Load() error = nil")
+	}
+	if strings.Contains(err.Error(), secret) || strings.Contains(err.Error(), values["NATS_URL"]) {
+		t.Fatalf("Load() leaked invalid NATS URL: %v", err)
+	}
+}

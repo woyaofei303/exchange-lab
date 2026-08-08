@@ -22,7 +22,7 @@ race:
 	go test -race ./...
 
 integration:
-	go test -race -tags=integration ./internal/health
+	go test -count=1 -race -tags=integration ./internal/health
 
 build:
 	mkdir -p bin
