@@ -15,9 +15,17 @@ import (
 	"github.com/woyaofei303/exchange-lab/internal/httpserver"
 )
 
-type readiness struct{ report health.Report }
+type readiness struct {
+	report health.Report
+	calls  *int
+}
 
-func (r readiness) Check(context.Context) health.Report { return r.report }
+func (r readiness) Check(context.Context) health.Report {
+	if r.calls != nil {
+		*r.calls = *r.calls + 1
+	}
+	return r.report
+}
 
 func request(t *testing.T, handler http.Handler, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
@@ -35,6 +43,18 @@ func TestHealthzReturnsProcessHealth(t *testing.T) {
 	var body map[string]any
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || body["status"] != "ok" {
 		t.Fatalf("health body = %#v, err = %v", body, err)
+	}
+}
+
+func TestHealthzNeverCallsReadiness(t *testing.T) {
+	calls := 0
+	handler := httpserver.NewHandler(readiness{calls: &calls}, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	response := request(t, handler, http.MethodGet, "/healthz")
+	if response.Code != http.StatusOK {
+		t.Fatalf("health response = %d %s", response.Code, response.Body.String())
+	}
+	if calls != 0 {
+		t.Fatalf("readiness Check() calls = %d, want 0", calls)
 	}
 }
 

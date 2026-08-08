@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -10,8 +11,76 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/woyaofei303/exchange-lab/internal/config"
+	"github.com/woyaofei303/exchange-lab/internal/health"
 )
+
+func TestConnectNATSReturnsPromptlyAndReadinessFailsWhileInitialConnectionRetries(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	started := time.Now()
+	connection, err := connectNATS("nats://" + address)
+	if err != nil {
+		t.Fatalf("connectNATS() error = %v", err)
+	}
+	defer connection.Close()
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("connectNATS() elapsed = %s, want no more than 1s", elapsed)
+	}
+	if status := connection.Status(); status != nats.RECONNECTING && status != nats.DISCONNECTED {
+		t.Fatalf("connectNATS() status = %s, want reconnecting or disconnected", status)
+	}
+
+	jetStream, err := connection.JetStream()
+	if err != nil {
+		t.Fatalf("JetStream() error = %v", err)
+	}
+	if err := health.NewNATSChecker(connection, jetStream).Check(context.Background()); err == nil {
+		t.Fatal("NATS readiness check error = nil while initial connection is unavailable")
+	}
+}
+
+func TestConnectNATSReturnsSanitizedSynchronousError(t *testing.T) {
+	const secret = "nats-config-secret"
+	connection, err := connectNATS("nats://[" + secret)
+	if connection != nil {
+		connection.Close()
+		t.Fatal("connectNATS() connection != nil")
+	}
+	if err == nil || err.Error() != "create nats client" {
+		t.Fatalf("connectNATS() error = %v, want sanitized configuration error", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("connectNATS() leaked configuration detail: %v", err)
+	}
+}
+
+func TestRedisCloseResultReturnsSanitizedCloseFailureWhenItIsSoleError(t *testing.T) {
+	const secret = "redis-close-secret"
+	err := redisCloseResult(nil, errors.New(secret))
+	if err == nil || err.Error() != "close redis client" {
+		t.Fatalf("redisCloseResult() error = %v, want sanitized close error", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("redisCloseResult() leaked close detail: %v", err)
+	}
+}
+
+func TestRedisCloseResultPreservesPrimaryServeError(t *testing.T) {
+	primary := errors.New("primary serve error")
+	err := redisCloseResult(primary, errors.New("redis close error"))
+	if !errors.Is(err, primary) {
+		t.Fatalf("redisCloseResult() error = %v, want primary error", err)
+	}
+}
 
 func TestRunReturnsSanitizedBindErrorBeforeInitializingDependencies(t *testing.T) {
 	occupied, err := net.Listen("tcp", "127.0.0.1:0")

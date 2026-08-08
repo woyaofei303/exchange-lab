@@ -1,8 +1,9 @@
-.env
-.env.*
-!.env.example
-.git/
-bin/
-docs-tdd/
-output-tdd/
-.superpowers/
+*
+!Dockerfile
+!.dockerignore
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**

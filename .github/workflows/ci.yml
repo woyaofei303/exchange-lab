@@ -21,3 +21,10 @@ jobs:
         run: make check
       - name: Build API image
         run: docker compose build api
+      - name: Start dependency services
+        run: docker compose up -d --wait --wait-timeout 120 postgres redis nats
+      - name: Run dependency integration tests
+        run: timeout 2m make integration
+      - name: Stop Compose services
+        if: always()
+        run: docker compose down

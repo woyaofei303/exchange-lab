@@ -16,7 +16,12 @@ import (
 	"github.com/woyaofei303/exchange-lab/internal/httpserver"
 )
 
-func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
+const (
+	natsConnectTimeout = time.Second
+	natsReconnectWait  = 500 * time.Millisecond
+)
+
+func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) (runErr error) {
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return errors.New("listen http server")
@@ -30,11 +35,13 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	defer pool.Close()
 
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
-	defer redisClient.Close()
+	defer func() {
+		runErr = redisCloseResult(runErr, redisClient.Close())
+	}()
 
-	natsConnection, err := nats.Connect(cfg.NATSURL)
+	natsConnection, err := connectNATS(cfg.NATSURL)
 	if err != nil {
-		return errors.New("create nats client")
+		return err
 	}
 	defer natsConnection.Close()
 
@@ -58,6 +65,29 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	}
 
 	return serve(ctx, server, listener, cfg.ShutdownTimeout)
+}
+
+func connectNATS(natsURL string) (*nats.Conn, error) {
+	connection, err := nats.Connect(natsURL,
+		nats.RetryOnFailedConnect(true),
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(natsReconnectWait),
+		nats.Timeout(natsConnectTimeout),
+	)
+	if err != nil {
+		return nil, errors.New("create nats client")
+	}
+	return connection, nil
+}
+
+func redisCloseResult(primaryErr, closeErr error) error {
+	if primaryErr != nil {
+		return primaryErr
+	}
+	if closeErr != nil {
+		return errors.New("close redis client")
+	}
+	return nil
 }
 
 func serve(ctx context.Context, server *http.Server, listener net.Listener, shutdownTimeout time.Duration) error {

@@ -8,6 +8,7 @@ max_attempts=20
 health_body='{"status":"ok"}'
 ready_body='{"status":"ready","checks":{"nats":"ok","postgres":"ok","redis":"ok"}}'
 not_ready_body='{"status":"not_ready","checks":{"nats":"ok","postgres":"ok","redis":"error"}}'
+nats_not_ready_body='{"status":"not_ready","checks":{"nats":"error","postgres":"ok","redis":"ok"}}'
 response_file="$(mktemp "${TMPDIR:-/tmp}/exchange-acceptance.XXXXXX")"
 completed=0
 
@@ -112,9 +113,19 @@ trap 'exit 143' TERM
 
 ./scripts/smoke.sh
 
-docker compose exec -T postgres psql -U exchange -d exchange -v ON_ERROR_STOP=1 -c \
+if ! postgres_user="$(docker compose exec -T postgres sh -c 'test -n "${POSTGRES_USER:-}" && printf "%s" "$POSTGRES_USER"')"; then
+	fail 'acceptance failed: running PostgreSQL user is unavailable'
+fi
+if ! postgres_database="$(docker compose exec -T postgres sh -c 'test -n "${POSTGRES_DB:-}" && printf "%s" "$POSTGRES_DB"')"; then
+	fail 'acceptance failed: running PostgreSQL database is unavailable'
+fi
+if [ -z "$postgres_user" ] || [ -z "$postgres_database" ]; then
+	fail 'acceptance failed: running PostgreSQL identity is unavailable'
+fi
+
+docker compose exec -T postgres psql -U "$postgres_user" -d "$postgres_database" -v ON_ERROR_STOP=1 -c \
 	"CREATE TABLE IF NOT EXISTS week_one_probe (id integer PRIMARY KEY, note text NOT NULL);"
-docker compose exec -T postgres psql -U exchange -d exchange -v ON_ERROR_STOP=1 -c \
+docker compose exec -T postgres psql -U "$postgres_user" -d "$postgres_database" -v ON_ERROR_STOP=1 -c \
 	"INSERT INTO week_one_probe (id, note) VALUES (1, 'persistent') ON CONFLICT (id) DO UPDATE SET note = EXCLUDED.note;"
 
 docker compose stop redis
@@ -134,6 +145,24 @@ if ! wait_for_response /readyz 200 "$ready_body"; then
 fi
 printf '%s\n' 'redis recovery readyz: HTTP 200 exact contract verified'
 
+docker compose stop nats
+docker compose up -d --no-deps --force-recreate api
+if ! wait_for_response /healthz 200 "$health_body"; then
+	fail 'acceptance failed: NATS cold-start outage liveness contract mismatch'
+fi
+printf '%s\n' 'nats cold-start outage healthz: HTTP 200 exact contract verified'
+
+if ! wait_for_response /readyz 503 "$nats_not_ready_body"; then
+	fail 'acceptance failed: NATS cold-start outage readiness contract mismatch'
+fi
+printf '%s\n' 'nats cold-start outage readyz: HTTP 503 exact NATS-only failure verified'
+
+docker compose start nats
+if ! wait_for_full_recovery; then
+	fail 'acceptance failed: NATS automatic recovery or Compose health mismatch'
+fi
+printf '%s\n' 'nats automatic recovery: exact HTTP 200 contract and four healthy services verified'
+
 docker compose up -d --force-recreate postgres api
 if ! wait_for_response /readyz 200 "$ready_body"; then
 	fail 'acceptance failed: recreation readiness contract mismatch'
@@ -145,7 +174,7 @@ if ! wait_for_services_healthy; then
 fi
 printf '%s\n' 'compose health: api, postgres, redis, and nats healthy'
 
-value="$(docker compose exec -T postgres psql -U exchange -d exchange -Atc "SELECT note FROM week_one_probe WHERE id = 1;")"
+value="$(docker compose exec -T postgres psql -U "$postgres_user" -d "$postgres_database" -Atc "SELECT note FROM week_one_probe WHERE id = 1;")"
 if [ "$value" != "persistent" ]; then
 	fail 'acceptance failed: PostgreSQL persistence marker mismatch'
 fi

@@ -5,7 +5,11 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Config struct {
@@ -46,12 +50,22 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	if err != nil || (postgresURL.Scheme != "postgres" && postgresURL.Scheme != "postgresql") {
 		return Config{}, fmt.Errorf("POSTGRES_DSN must use postgres scheme")
 	}
+	if postgresURL.Opaque != "" || postgresURL.Hostname() == "" || strings.Trim(postgresURL.Path, "/") == "" {
+		return Config{}, fmt.Errorf("POSTGRES_DSN is invalid")
+	}
+	if !validOptionalURLPort(postgresURL) {
+		return Config{}, fmt.Errorf("POSTGRES_DSN is invalid")
+	}
+	if _, err := pgxpool.ParseConfig(postgresDSN); err != nil {
+		return Config{}, fmt.Errorf("POSTGRES_DSN is invalid")
+	}
 
 	redisAddr, err := read("REDIS_ADDR")
 	if err != nil {
 		return Config{}, err
 	}
-	if _, _, err := net.SplitHostPort(redisAddr); err != nil {
+	redisHost, redisPort, err := net.SplitHostPort(redisAddr)
+	if err != nil || redisHost == "" || !validPort(redisPort) {
 		return Config{}, fmt.Errorf("REDIS_ADDR is invalid")
 	}
 
@@ -81,6 +95,31 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		DependencyTimeout: dependencyTimeout,
 		ShutdownTimeout:   shutdownTimeout,
 	}, nil
+}
+
+func validOptionalURLPort(parsedURL *url.URL) bool {
+	host := parsedURL.Host
+	if strings.HasPrefix(host, "[") {
+		closingBracket := strings.LastIndex(host, "]")
+		if closingBracket == -1 {
+			return false
+		}
+		suffix := host[closingBracket+1:]
+		if suffix == "" {
+			return true
+		}
+		return strings.HasPrefix(suffix, ":") && validPort(strings.TrimPrefix(suffix, ":"))
+	}
+	if !strings.Contains(host, ":") {
+		return true
+	}
+	_, port, err := net.SplitHostPort(host)
+	return err == nil && validPort(port)
+}
+
+func validPort(port string) bool {
+	numericPort, err := strconv.Atoi(port)
+	return err == nil && numericPort >= 1 && numericPort <= 65535
 }
 
 func readDuration(read func(string) (string, error), key string) (time.Duration, error) {
