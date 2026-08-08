@@ -13,7 +13,7 @@
 
 ## Quickstart
 
-需要安装 Go 1.26.5、Docker 和 Docker Compose。首次启动时复制本地环境配置，启动四个服务，再运行冒烟检查：
+需要安装 Go 1.26.5、Docker、Docker Compose、POSIX shell、`curl` 和 `mktemp`。首次启动时复制本地环境配置，启动四个服务并等待它们全部健康，再运行冒烟检查：
 
 ```bash
 cp .env.example .env

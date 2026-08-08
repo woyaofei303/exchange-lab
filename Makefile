@@ -1,7 +1,7 @@
 .PHONY: up down logs fmt vet test race build check smoke acceptance
 
 up:
-	docker compose up -d --build
+	docker compose up -d --build --wait --wait-timeout 120
 
 down:
 	docker compose down
