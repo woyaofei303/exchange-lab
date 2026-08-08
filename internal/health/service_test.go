@@ -45,20 +45,30 @@ func TestServiceKeepsEveryResultWhenOneDependencyFails(t *testing.T) {
 }
 
 func TestServiceTimesOutSlowDependency(t *testing.T) {
+	observedCancellation := make(chan error, 1)
 	service := health.NewService(10*time.Millisecond,
 		checker{name: "nats", check: func(ctx context.Context) error {
 			<-ctx.Done()
-			return ctx.Err()
+			err := ctx.Err()
+			observedCancellation <- err
+			return err
 		}},
 	)
 
 	started := time.Now()
 	report := service.Check(context.Background())
+	elapsed := time.Since(started)
 	if report.Ready || report.Checks["nats"] != health.StatusError {
 		t.Fatalf("Check() report = %#v", report)
 	}
-	if time.Since(started) > 200*time.Millisecond {
-		t.Fatal("Check() exceeded timeout")
+	if err := <-observedCancellation; !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("checker observed cancellation error = %v, want context deadline exceeded", err)
+	}
+	if err := report.Errors["nats"]; !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Check() stored error = %v, want context deadline exceeded", err)
+	}
+	if elapsed > 200*time.Millisecond {
+		t.Fatalf("Check() elapsed = %s, want no more than 200ms", elapsed)
 	}
 }
 

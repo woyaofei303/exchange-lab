@@ -13,7 +13,10 @@ const (
 
 type Checker interface {
 	Name() string
-	Check(context.Context) error
+	// Check verifies the dependency. Implementations MUST honor cancellation
+	// and deadlines in ctx, returning promptly after ctx.Done is closed.
+	// Service.Check's completion bound depends on this invariant.
+	Check(ctx context.Context) error
 }
 
 type Report struct {
