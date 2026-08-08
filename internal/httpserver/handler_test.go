@@ -50,8 +50,50 @@ func TestReadyzReturnsServiceUnavailableWithoutLeakingError(t *testing.T) {
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("ready response = %d %s", response.Code, response.Body.String())
 	}
+	var body struct {
+		Status string            `json:"status"`
+		Checks map[string]string `json:"checks"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode ready body: %v", err)
+	}
+	if body.Status != "not_ready" {
+		t.Fatalf("ready status = %q, want not_ready", body.Status)
+	}
+	for name, want := range report.Checks {
+		if got := body.Checks[name]; got != want {
+			t.Fatalf("ready check %s = %q, want %q", name, got, want)
+		}
+	}
 	if strings.Contains(response.Body.String(), "super-secret") || strings.Contains(response.Body.String(), "postgres://") {
 		t.Fatalf("ready response leaked secret: %s", response.Body.String())
+	}
+}
+
+func TestReadyzReturnsReadyWithAllDependencyStatuses(t *testing.T) {
+	report := health.Report{
+		Ready:  true,
+		Checks: map[string]string{"postgres": health.StatusOK, "redis": health.StatusOK, "nats": health.StatusOK},
+	}
+	handler := httpserver.NewHandler(readiness{report: report}, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+	response := request(t, handler, http.MethodGet, "/readyz")
+	if response.Code != http.StatusOK {
+		t.Fatalf("ready response = %d %s", response.Code, response.Body.String())
+	}
+	var body struct {
+		Status string            `json:"status"`
+		Checks map[string]string `json:"checks"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode ready body: %v", err)
+	}
+	if body.Status != "ready" {
+		t.Fatalf("ready status = %q, want ready", body.Status)
+	}
+	for name, want := range report.Checks {
+		if got := body.Checks[name]; got != want {
+			t.Fatalf("ready check %s = %q, want %q", name, got, want)
+		}
 	}
 }
 
@@ -61,6 +103,9 @@ func TestHealthEndpointsRejectNonGETMethods(t *testing.T) {
 		response := request(t, handler, http.MethodPost, path)
 		if response.Code != http.StatusMethodNotAllowed {
 			t.Fatalf("POST %s status = %d", path, response.Code)
+		}
+		if allow := response.Header().Get("Allow"); allow != http.MethodGet {
+			t.Fatalf("POST %s Allow = %q, want %q", path, allow, http.MethodGet)
 		}
 	}
 }
