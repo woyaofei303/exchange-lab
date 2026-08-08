@@ -2,8 +2,8 @@
 set -eu
 
 base_url="${BASE_URL:-http://127.0.0.1:8080}"
-curl_connect_timeout="${CURL_CONNECT_TIMEOUT:-1}"
-curl_max_time="${CURL_MAX_TIME:-2}"
+curl_connect_timeout=1
+curl_max_time=2
 max_attempts=20
 health_body='{"status":"ok"}'
 ready_body='{"status":"ready","checks":{"nats":"ok","postgres":"ok","redis":"ok"}}'
@@ -110,7 +110,7 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-CURL_CONNECT_TIMEOUT="$curl_connect_timeout" CURL_MAX_TIME="$curl_max_time" ./scripts/smoke.sh
+./scripts/smoke.sh
 
 docker compose exec -T postgres psql -U exchange -d exchange -v ON_ERROR_STOP=1 -c \
 	"CREATE TABLE IF NOT EXISTS week_one_probe (id integer PRIMARY KEY, note text NOT NULL);"

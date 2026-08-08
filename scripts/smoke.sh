@@ -2,8 +2,8 @@
 set -eu
 
 base_url="${BASE_URL:-http://127.0.0.1:8080}"
-curl_connect_timeout="${CURL_CONNECT_TIMEOUT:-1}"
-curl_max_time="${CURL_MAX_TIME:-2}"
+curl_connect_timeout=1
+curl_max_time=2
 health_body='{"status":"ok"}'
 ready_body='{"status":"ready","checks":{"nats":"ok","postgres":"ok","redis":"ok"}}'
 response_file="$(mktemp "${TMPDIR:-/tmp}/exchange-smoke.XXXXXX")"
