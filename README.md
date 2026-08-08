@@ -1,194 +1,81 @@
 # Exchange Lab
 
-一个用于学习和实践交易系统架构的个人工程项目。
+用于通过代码学习 Go 全栈、交易系统工程和 AI 协作的模拟 USDT 本位永续合约项目。本项目不连接真实资金。
 
-目标是通过 Go、MySQL、Redis、Kafka、Docker、
-可观测性和 AI 技术，构建一个简化版交易平台。
+## Week 01 Foundation
 
-该项目重点关注：
+- Go 1.26.5 HTTP API
+- PostgreSQL 18.4
+- Redis 8.4.1
+- NATS 2.12.4 with JetStream
+- Docker Compose and GitHub Actions
+- `/healthz` process liveness and `/readyz` dependency readiness
 
-- 后端服务设计
-- 数据一致性
-- 交易流程
-- 系统稳定性
-- 工程化部署
-- AI 辅助运维
+## Quickstart
 
-
----
-
-# Project Goal
-
-通过模拟交易系统，学习完整的软件交付流程：
-
-用户请求：
-
-Frontend
-↓
-Backend API
-↓
-Database
-↓
-Cache
-↓
-Message Queue
-↓
-Monitoring
-↓
-AI Assistant
-
-
-最终实现：
-
-- 用户系统
-- 账户系统
-- 资产系统
-- 订单系统
-- 撮合系统
-- 账本系统
-- 监控系统
-- AI 故障分析助手
-
-
----
-
-# Tech Stack
-
-## Frontend
-
-- TypeScript
-- React / Vue
-
-## Backend
-
-- Go
-- Gin
-
-## Database
-
-- MySQL
-
-## Cache
-
-- Redis
-
-## Message Queue
-
-- Kafka
-
-## Deployment
-
-- Linux
-- Nginx
-- Docker Compose
-
-## CI/CD
-
-- GitLab CI
-
-## Observability
-
-- OpenTelemetry
-- Prometheus
-- Grafana
-
-## AI
-
-- Python
-- LLM API
-- Tool Calling
-- RAG
-- Evals
-
-
----
-
-# System Architecture
-
-(后续补充架构图)
-
-
----
-
-# Features
-
-## User
-
-- [ ] 用户注册
-- [ ] 用户登录
-- [ ] 权限管理
-
-
-## Account
-
-- [ ] 用户账户
-- [ ] 资产查询
-- [ ] 余额变化
-
-
-## Trading
-
-- [ ] 创建订单
-- [ ] 撤销订单
-- [ ] 订单状态管理
-- [ ] 简化撮合
-
-
-## System
-
-- [ ] Redis缓存
-- [ ] Kafka消息
-- [ ] 日志系统
-- [ ] 链路追踪
-- [ ] 监控告警
-
-
-## AI
-
-- [ ] AI日志分析
-- [ ] AI故障排查
-- [ ] AI运行手册查询
-
-
----
-
-# Project Progress
-
-
-## Phase 0 Environment Setup
-
-Completed:
-
-- [x] Go environment
-- [x] Docker environment
-- [x] MySQL container
-- [x] GitHub repository
-- [x] SSH authentication
-
-
-## Phase 1 Backend Foundation
-
-TODO:
-
-- [ ] Go HTTP Server
-- [ ] User API
-- [ ] Database connection
-- [ ] Unit Test
-
-
----
-
-# Local Development
-
-
-## Requirements
-
-- Go
-- Docker
-- Docker Compose
-
-
-## Start MySQL
+需要安装 Go 1.26.5、Docker 和 Docker Compose。首次启动时复制本地环境配置，启动四个服务，再运行冒烟检查：
 
 ```bash
-docker compose up -d
+cp .env.example .env
+make up
+make smoke
+```
+
+默认所有宿主机端口只绑定到 loopback：
+
+- API: `127.0.0.1:8080`
+- PostgreSQL: `127.0.0.1:5432`
+- Redis: `127.0.0.1:6379`
+- NATS client: `127.0.0.1:4222`
+- NATS monitoring: `127.0.0.1:8222`
+
+如果本机的 `8080` 端口已被占用，可以只改 API 宿主机端口；同一条命令中的 Compose 和验收步骤会共享该设置：
+
+```bash
+API_HOST_PORT=18080 BASE_URL=http://127.0.0.1:18080 make up smoke acceptance
+```
+
+## Endpoints
+
+`/healthz` 只表示 API 进程存活；`/readyz` 会检查 PostgreSQL、Redis 和 NATS，任一依赖不可用时返回 HTTP `503`。
+
+```bash
+curl --fail --silent http://127.0.0.1:8080/healthz
+curl --fail --silent http://127.0.0.1:8080/readyz
+```
+
+正常响应示例：
+
+```json
+{"status":"ok"}
+{"status":"ready","checks":{"nats":"ok","postgres":"ok","redis":"ok"}}
+```
+
+## Verification
+
+`make check` 运行格式、静态检查、单元测试、race 测试、构建和 Compose 配置验证。`make acceptance` 还会验证 Redis 故障时存活/就绪语义、恢复和 PostgreSQL 数据持久性。
+
+```bash
+make check
+make acceptance
+```
+
+## Shutdown and Reset
+
+日常停机使用以下命令。它会停止并移除容器和网络，但保留 PostgreSQL、Redis 和 NATS 的命名数据卷：
+
+```bash
+make down
+```
+
+### Destructive reset
+
+警告：以下命令会永久删除本项目的 PostgreSQL、Redis 和 NATS 命名数据卷及其中的所有本地数据。只在明确需要全量重置时运行：
+
+```bash
+docker compose down --volumes
+```
+
+## Safety Boundary
+
+All balances are simulated. No deposit, withdrawal, custody, or real-money integration is in scope. AI tools remain read-only unless a separately reviewed design explicitly authorizes a narrow write operation.
