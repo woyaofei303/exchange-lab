@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 .git/
+bin/
 docs-tdd/
 output-tdd/
 .superpowers/

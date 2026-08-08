@@ -22,14 +22,16 @@ race:
 	go test -race ./...
 
 build:
-	go build ./cmd/api
+	mkdir -p bin
+	go build -o bin/api ./cmd/api
 
 check:
 	test -z "$$(gofmt -l .)"
 	go vet ./...
 	go test ./...
 	go test -race ./...
-	go build ./cmd/api
+	mkdir -p bin
+	go build -o bin/api ./cmd/api
 	docker compose config >/dev/null
 
 smoke:
