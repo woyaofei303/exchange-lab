@@ -35,7 +35,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	if _, err := net.ResolveTCPAddr("tcp", httpAddr); err != nil {
-		return Config{}, fmt.Errorf("APP_HTTP_ADDR is invalid: %w", err)
+		return Config{}, fmt.Errorf("APP_HTTP_ADDR is invalid")
 	}
 
 	postgresDSN, err := read("POSTGRES_DSN")
@@ -52,7 +52,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	if _, _, err := net.SplitHostPort(redisAddr); err != nil {
-		return Config{}, fmt.Errorf("REDIS_ADDR is invalid: %w", err)
+		return Config{}, fmt.Errorf("REDIS_ADDR is invalid")
 	}
 
 	natsURL, err := read("NATS_URL")

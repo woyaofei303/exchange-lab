@@ -51,6 +51,32 @@ func TestLoadRejectsMissingValueWithoutLeakingSecrets(t *testing.T) {
 	}
 }
 
+func TestLoadDoesNotLeakInvalidAddressValues(t *testing.T) {
+	const secret = "secret-address-value"
+
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{name: "http address", key: "APP_HTTP_ADDR"},
+		{name: "redis address", key: "REDIS_ADDR"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values := validValues()
+			values[tt.key] = secret
+
+			_, err := config.Load(lookup(values))
+			if err == nil {
+				t.Fatal("Load() error = nil")
+			}
+			if strings.Contains(err.Error(), secret) {
+				t.Fatalf("Load() leaked address value: %v", err)
+			}
+		})
+	}
+}
+
 func TestLoadRejectsInvalidURLsAndTimeouts(t *testing.T) {
 	tests := []struct {
 		name  string
