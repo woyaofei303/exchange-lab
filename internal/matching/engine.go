@@ -1,4 +1,4 @@
-// Package matching implements a deterministic price-time-priority order book.
+// Package matching 实现确定性的价格时间优先订单簿。
 package matching
 
 import (
@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// Matching errors classify invalid input, duplicate order IDs and missing orders.
+// 撮合错误按无效输入、重复订单 ID 和订单缺失分类。
 var (
 	ErrInvalidOrder = errors.New("invalid matching order")
 	ErrDuplicate    = errors.New("duplicate matching order")
 	ErrNotFound     = errors.New("matching order not found")
 )
 
-// LimitOrder is a validated engine input ordered by its durable stream sequence.
+// LimitOrder 是已校验的引擎输入，按持久化流序号排序。
 type LimitOrder struct {
 	ID            string
 	UserID        int64
@@ -26,7 +26,7 @@ type LimitOrder struct {
 	Sequence      int64
 }
 
-// Trade is an immutable maker-price execution produced by the engine.
+// Trade 是引擎生成的不可变挂单方价格成交。
 type Trade struct {
 	ID            string
 	MakerOrderID  string
@@ -39,7 +39,7 @@ type Trade struct {
 	Sequence      int64
 }
 
-// Event records the resulting lifecycle change for one order.
+// Event 记录一个订单产生的生命周期变更。
 type Event struct {
 	Type           string
 	OrderID        string
@@ -48,7 +48,7 @@ type Event struct {
 	TradeID        string
 }
 
-// Result contains all executions and order transitions from one incoming order.
+// Result 包含一个传入订单产生的所有成交和订单转换。
 type Result struct {
 	Trades                 []Trade
 	Events                 []Event
@@ -56,7 +56,7 @@ type Result struct {
 	IncomingRemainingAtoms int64
 }
 
-// SnapshotOrder is the durable representation of one resting book order.
+// SnapshotOrder 是订单簿中一个挂单的持久化表示。
 type SnapshotOrder struct {
 	ID             string
 	UserID         int64
@@ -68,7 +68,7 @@ type SnapshotOrder struct {
 	Status         trading.OrderStatus
 }
 
-// Snapshot contains price-time ordered bids and asks for deterministic recovery.
+// Snapshot 包含按价格时间排序的买单和卖单，用于确定性恢复。
 type Snapshot struct {
 	Bids []SnapshotOrder
 	Asks []SnapshotOrder
@@ -79,7 +79,7 @@ type restingOrder struct {
 	remaining int64
 }
 
-// Engine is an in-memory deterministic order book with no I/O or clock dependency.
+// Engine 是不依赖 I/O 或时钟的内存确定性订单簿。
 type Engine struct {
 	bids          map[int64][]*restingOrder
 	asks          map[int64][]*restingOrder
@@ -90,12 +90,12 @@ type Engine struct {
 	tradeSequence int64
 }
 
-// NewEngine returns an empty order book.
+// NewEngine 返回空订单簿。
 func NewEngine() *Engine {
 	return &Engine{bids: make(map[int64][]*restingOrder), asks: make(map[int64][]*restingOrder), byID: make(map[string]*restingOrder)}
 }
 
-// NewEngineFromSnapshot validates and restores a non-crossed durable book.
+// NewEngineFromSnapshot 校验并恢复未交叉的持久化订单簿。
 func NewEngineFromSnapshot(snapshot Snapshot, lastSequence, tradeSequence int64) (*Engine, error) {
 	if lastSequence < 0 || tradeSequence < 0 {
 		return nil, ErrInvalidOrder
@@ -123,7 +123,7 @@ func NewEngineFromSnapshot(snapshot Snapshot, lastSequence, tradeSequence int64)
 	return engine, nil
 }
 
-// Add matches an order at resting-maker prices, then rests any remainder.
+// Add 按挂单方价格撮合订单，然后将剩余部分挂入订单簿。
 func (e *Engine) Add(incoming LimitOrder) (Result, error) {
 	if e == nil || !incoming.valid() || incoming.Sequence <= e.lastSequence {
 		return Result{}, ErrInvalidOrder
@@ -171,7 +171,7 @@ func (e *Engine) Add(incoming LimitOrder) (Result, error) {
 	return result, nil
 }
 
-// Cancel removes one resting order while preserving all other FIFO positions.
+// Cancel 移除一个挂单，同时保留其他订单的 FIFO 位置。
 func (e *Engine) Cancel(orderID string) (SnapshotOrder, error) {
 	if e == nil {
 		return SnapshotOrder{}, ErrNotFound
@@ -198,7 +198,7 @@ func (e *Engine) Cancel(orderID string) (SnapshotOrder, error) {
 	return snapshotOf(item, trading.OrderStatusCanceled), nil
 }
 
-// Snapshot returns a detached, price-time ordered view of the current book.
+// Snapshot 返回当前订单簿独立的价格时间有序视图。
 func (e *Engine) Snapshot() Snapshot {
 	if e == nil {
 		return Snapshot{}
@@ -206,7 +206,7 @@ func (e *Engine) Snapshot() Snapshot {
 	return Snapshot{Bids: e.snapshotSide(trading.SideBuy), Asks: e.snapshotSide(trading.SideSell)}
 }
 
-// TradeSequence returns the last deterministic trade sequence assigned.
+// TradeSequence 返回最后分配的确定性成交序号。
 func (e *Engine) TradeSequence() int64 {
 	if e == nil {
 		return 0

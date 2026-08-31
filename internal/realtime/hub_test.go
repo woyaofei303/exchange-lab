@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/realtime"
+	"exchange-lab/internal/realtime"
 )
 
 func TestHubFanoutDoesNotBlockOnSlowSubscriber(t *testing.T) {

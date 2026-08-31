@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// Stream, consumer and header names are stable parts of the version-1 event contract.
+// 流、消费者和消息头名称是 v1 事件契约的稳定组成部分。
 const (
 	OrdersStream      = "ORDERS"
 	TradesStream      = "TRADES"
@@ -19,7 +19,7 @@ const (
 	CorrelationHeader = "X-Correlation-ID"
 )
 
-// Configure creates bounded ORDERS/TRADES streams and the audit consumer.
+// Configure 创建有界的 ORDERS/TRADES 流和审计消费者。
 func Configure(ctx context.Context, js jetstream.JetStream) (jetstream.Consumer, error) {
 	if js == nil {
 		return nil, fmt.Errorf("configure event streams: nil JetStream")
@@ -51,7 +51,7 @@ func Configure(ctx context.Context, js jetstream.JetStream) (jetstream.Consumer,
 	return consumer, nil
 }
 
-// ConfigureMatching creates the single-inflight durable order consumer.
+// ConfigureMatching 创建同一时间仅处理一条消息的持久订单消费者。
 func ConfigureMatching(ctx context.Context, js jetstream.JetStream) (jetstream.Consumer, error) {
 	if js == nil {
 		return nil, fmt.Errorf("configure matching consumer: nil JetStream")
@@ -72,7 +72,7 @@ func ConfigureMatching(ctx context.Context, js jetstream.JetStream) (jetstream.C
 	return consumer, nil
 }
 
-// ConfigurePosition creates the single-inflight durable trade consumer.
+// ConfigurePosition 创建同一时间仅处理一条消息的持久成交通知消费者。
 func ConfigurePosition(ctx context.Context, js jetstream.JetStream) (jetstream.Consumer, error) {
 	if js == nil {
 		return nil, fmt.Errorf("configure position consumer: nil JetStream")
@@ -92,12 +92,12 @@ func ConfigurePosition(ctx context.Context, js jetstream.JetStream) (jetstream.C
 	return consumer, nil
 }
 
-// NATSTransport publishes validated Outbox events through JetStream acknowledgements.
+// NATSTransport 通过 JetStream 确认机制发布已校验的 Outbox 事件。
 type NATSTransport struct {
 	js jetstream.JetStream
 }
 
-// NewNATSTransport rejects a nil JetStream context.
+// NewNATSTransport 拒绝空的 JetStream 上下文。
 func NewNATSTransport(js jetstream.JetStream) (*NATSTransport, error) {
 	if js == nil {
 		return nil, fmt.Errorf("create JetStream transport: nil context")
@@ -105,7 +105,7 @@ func NewNATSTransport(js jetstream.JetStream) (*NATSTransport, error) {
 	return &NATSTransport{js: js}, nil
 }
 
-// Publish sends one event with stable deduplication and correlation headers.
+// Publish 发送一个事件，并附带稳定的去重和关联消息头。
 func (t *NATSTransport) Publish(ctx context.Context, event OutboxEvent) error {
 	payload, err := Encode(event)
 	if err != nil {

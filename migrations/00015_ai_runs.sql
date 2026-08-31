@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds auditable model usage and evidence references for read-only explanations.
+-- 添加用于只读解释的可审计模型用量和证据引用。
 CREATE TABLE ai_runs (
     id TEXT PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

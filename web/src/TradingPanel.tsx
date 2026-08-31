@@ -1,4 +1,4 @@
-/** Authenticated teaching UI for orders, margin, risk and read-only AI evidence. */
+/** 用于订单、保证金、风险和只读 AI 证据的身份认证教学界面。 */
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -34,7 +34,7 @@ const inputClass = 'w-full rounded-[6px] border border-[#303843] bg-[#0b0e11] px
 const labelClass = 'my-2.5 grid gap-[5px] text-xs text-[#848e9c]'
 const buttonRowClass = 'mt-3 flex flex-wrap gap-[7px]'
 
-/** Renders the simulated contract workflow without becoming a source of truth. */
+/** 渲染模拟合约流程，但不作为事实来源。 */
 export function TradingPanel({ symbol, markPrice }: Props) {
   const queryClient = useQueryClient()
   const [email, setEmail] = useState('demo@example.com')

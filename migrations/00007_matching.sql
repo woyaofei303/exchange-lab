@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds deterministic book snapshots, offsets, executions and matching facts.
+-- 添加确定性订单簿快照、偏移量、成交和撮合事实。
 CREATE TABLE matching_book_orders (
     order_id TEXT PRIMARY KEY REFERENCES orders(id) ON DELETE RESTRICT,
     symbol TEXT NOT NULL REFERENCES instruments(symbol) ON DELETE RESTRICT,

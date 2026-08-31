@@ -1,5 +1,5 @@
 -- +goose Up
--- Establishes users, instruments, candles and append-only audit foundations.
+-- 建立用户、交易品种、K 线和仅追加审计的基础结构。
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email TEXT NOT NULL CHECK (char_length(email) BETWEEN 3 AND 320),

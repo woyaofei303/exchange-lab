@@ -7,24 +7,24 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/identity"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/identity"
 )
 
-// IdentityRepository persists users, hashed sessions and append-only audit facts.
+// IdentityRepository 持久化用户、会话哈希和仅追加审计事实。
 type IdentityRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewIdentityRepository constructs a context-bounded identity repository.
+// NewIdentityRepository 创建受上下文限制的身份仓储。
 func NewIdentityRepository(pool *pgxpool.Pool, timeout time.Duration) *IdentityRepository {
 	return &IdentityRepository{pool: pool, timeout: timeout}
 }
 
-// CreateUser inserts a normalized ordinary user and maps unique conflicts.
+// CreateUser 插入规范化普通用户，并映射唯一性冲突。
 func (r *IdentityRepository) CreateUser(ctx context.Context, email, passwordHash string) (identity.User, error) {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -43,7 +43,7 @@ func (r *IdentityRepository) CreateUser(ctx context.Context, email, passwordHash
 	return user, nil
 }
 
-// UserByEmail resolves one identity case-insensitively.
+// UserByEmail 以不区分大小写的方式查找一个身份。
 func (r *IdentityRepository) UserByEmail(ctx context.Context, email string) (identity.User, error) {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -61,7 +61,7 @@ func (r *IdentityRepository) UserByEmail(ctx context.Context, email string) (ide
 	return user, nil
 }
 
-// CreateSession persists only the token hash and expiry metadata.
+// CreateSession 仅持久化令牌哈希和过期元数据。
 func (r *IdentityRepository) CreateSession(ctx context.Context, session identity.Session) error {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -78,7 +78,7 @@ func (r *IdentityRepository) CreateSession(ctx context.Context, session identity
 	return nil
 }
 
-// Session resolves one non-revoked token hash with its user identity.
+// Session 根据未撤销的令牌哈希查找其用户身份。
 func (r *IdentityRepository) Session(ctx context.Context, hash identity.TokenHash) (identity.Session, error) {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -105,7 +105,7 @@ func (r *IdentityRepository) Session(ctx context.Context, hash identity.TokenHas
 	return session, nil
 }
 
-// RotateSession revokes and replaces a live session in one Serializable transaction.
+// RotateSession 在一个 Serializable 事务中撤销并替换有效会话。
 func (r *IdentityRepository) RotateSession(ctx context.Context, old identity.TokenHash, replacement identity.Session) error {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -140,7 +140,7 @@ func (r *IdentityRepository) RotateSession(ctx context.Context, old identity.Tok
 	return nil
 }
 
-// RevokeSession idempotently timestamps an active session.
+// RevokeSession 幂等地为有效会话记录撤销时间。
 func (r *IdentityRepository) RevokeSession(ctx context.Context, hash identity.TokenHash, revokedAt time.Time) error {
 	operation, cancel := r.operation(ctx)
 	defer cancel()
@@ -154,7 +154,7 @@ func (r *IdentityRepository) RevokeSession(ctx context.Context, hash identity.To
 	return nil
 }
 
-// AppendAudit stores one structured identity or authorization fact.
+// AppendAudit 存储一条结构化身份或授权事实。
 func (r *IdentityRepository) AppendAudit(ctx context.Context, event identity.AuditEvent) error {
 	metadata, err := json.Marshal(event.Metadata)
 	if err != nil {
@@ -172,7 +172,7 @@ func (r *IdentityRepository) AppendAudit(ctx context.Context, event identity.Aud
 	return nil
 }
 
-// ListAudit returns the most recent audit facts in deterministic order.
+// ListAudit 以确定性顺序返回最近的审计事实。
 func (r *IdentityRepository) ListAudit(ctx context.Context, limit int) ([]identity.AuditEvent, error) {
 	operation, cancel := r.operation(ctx)
 	defer cancel()

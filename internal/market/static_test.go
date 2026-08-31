@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/trading"
 )
 
 func TestStaticReaderFiltersInstrumentsBySymbol(t *testing.T) {

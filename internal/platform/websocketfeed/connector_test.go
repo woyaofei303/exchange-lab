@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/platform/websocketfeed"
 	"github.com/coder/websocket"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/platform/websocketfeed"
 )
 
 func TestConnectorReadsTextEventAndPings(t *testing.T) {

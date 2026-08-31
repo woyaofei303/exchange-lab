@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/realtime"
 	"github.com/coder/websocket"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/realtime"
 )
 
 func TestCandlesReturnsExactHistoricalViews(t *testing.T) {

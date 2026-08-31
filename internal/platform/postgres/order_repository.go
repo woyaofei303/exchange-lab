@@ -8,26 +8,26 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/ledger"
+	"exchange-lab/internal/order"
+	"exchange-lab/internal/trading"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	"github.com/woyaofei303/exchange-lab/internal/order"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
-// OrderRepository owns atomic order, margin reserve, ledger and Outbox writes.
+// OrderRepository 管理订单、保证金预留、账本和 Outbox 的原子写入。
 type OrderRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 	now     func() time.Time
 }
 
-// NewOrderRepository constructs a context-bounded order repository.
+// NewOrderRepository 创建受上下文限制的订单仓储。
 func NewOrderRepository(pool *pgxpool.Pool, timeout time.Duration) *OrderRepository {
 	return &OrderRepository{pool: pool, timeout: timeout, now: time.Now}
 }
 
-// Place retries serialization failures around one idempotent order transaction.
+// Place 围绕一个幂等订单事务重试序列化失败。
 func (r *OrderRepository) Place(ctx context.Context, placed order.Order, key string, requestHash [32]byte) (order.Result, error) {
 	return retrySerialization(ctx, 3, func() (order.Result, error) {
 		return r.placeOnce(ctx, placed, key, requestHash)
@@ -101,7 +101,7 @@ func (r *OrderRepository) placeOnce(ctx context.Context, placed order.Order, key
 	return order.Result{Order: placed}, nil
 }
 
-// Cancel releases remaining reserve and emits cancellation facts atomically.
+// Cancel 原子释放剩余预留资金并发布取消事实。
 func (r *OrderRepository) Cancel(ctx context.Context, userID int64, orderID, key string, requestHash [32]byte) (order.Result, error) {
 	return retrySerialization(ctx, 3, func() (order.Result, error) {
 		return r.cancelOnce(ctx, userID, orderID, key, requestHash)
@@ -185,7 +185,7 @@ func (r *OrderRepository) cancelOnce(ctx context.Context, userID int64, orderID,
 	return order.Result{Order: canceled}, nil
 }
 
-// List returns a bounded newest-first order history for one user.
+// List 返回一个用户有界且最新优先的订单历史。
 func (r *OrderRepository) List(ctx context.Context, userID int64, limit int) ([]order.Order, error) {
 	operation, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

@@ -1,7 +1,6 @@
 package ai
 
-// ReadOnlyToolNames is an allow-list shared by the AI and MCP layers. A
-// mutating trading capability must never be added to this list.
+// ReadOnlyToolNames 是 AI 层和 MCP 层共享的允许列表，禁止加入任何会修改交易状态的能力。
 var ReadOnlyToolNames = []string{
 	"get_position",
 	"get_margin_status",
@@ -10,7 +9,7 @@ var ReadOnlyToolNames = []string{
 	"get_liquidation_history",
 }
 
-// IsReadOnlyTool reports whether a tool is in the explicit non-mutating allow-list.
+// IsReadOnlyTool 表示工具是否位于明确的只读允许列表中。
 func IsReadOnlyTool(name string) bool {
 	for _, allowed := range ReadOnlyToolNames {
 		if name == allowed {

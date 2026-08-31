@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
 func testInstrument(t *testing.T) trading.Instrument {

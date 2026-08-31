@@ -1,13 +1,12 @@
-// Package migrations embeds the versioned PostgreSQL schema used by the API
-// and the standalone migration command.
+// Package migrations 内嵌 API 和独立迁移命令使用的版本化 PostgreSQL 数据库结构。
 package migrations
 
 import "embed"
 
-// CurrentVersion is the schema version required by the current API binary.
+// CurrentVersion 是当前 API 二进制程序所需的数据库结构版本。
 const CurrentVersion int64 = 16
 
-// FS contains SQL migration files at the package root.
+// FS 包含包根目录下的 SQL 迁移文件。
 //
 //go:embed *.sql
 var FS embed.FS

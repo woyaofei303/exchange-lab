@@ -1,4 +1,4 @@
-// Command market-simulator serves deterministic local market-data streams.
+// Command market-simulator 提供确定性的本地行情数据流。
 package main
 
 import (
@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/platform/websocketfeed"
+	"exchange-lab/internal/config"
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/platform/websocketfeed"
 )
 
 func main() {

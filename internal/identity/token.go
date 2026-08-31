@@ -8,15 +8,15 @@ import (
 	"io"
 )
 
-// TokenHash is the only session-token representation stored by the server.
+// TokenHash 是服务端存储的唯一会话令牌表示形式。
 type TokenHash [sha256.Size]byte
 
-// TokenIssuer creates cryptographically random opaque session tokens.
+// TokenIssuer 创建密码学随机的不透明会话令牌。
 type TokenIssuer struct {
 	Random io.Reader
 }
 
-// Issue returns one plaintext token and its stable SHA-256 storage hash.
+// Issue 返回一个明文令牌及其稳定的 SHA-256 存储哈希。
 func (i TokenIssuer) Issue() (string, TokenHash, error) {
 	reader := i.Random
 	if reader == nil {
@@ -30,7 +30,7 @@ func (i TokenIssuer) Issue() (string, TokenHash, error) {
 	return token, HashToken(token), nil
 }
 
-// HashToken converts an opaque token to its non-secret lookup key.
+// HashToken 将不透明令牌转换为非敏感查询键。
 func HashToken(token string) TokenHash {
 	return sha256.Sum256([]byte(token))
 }

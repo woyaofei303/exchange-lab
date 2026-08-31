@@ -1,4 +1,4 @@
-module github.com/woyaofei303/exchange-lab
+module exchange-lab
 
 go 1.26.6
 

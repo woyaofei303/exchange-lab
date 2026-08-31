@@ -5,10 +5,10 @@ import (
 	"math"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// SimulatorConfig fixes the deterministic stream identity, scales and clock.
+// SimulatorConfig 固定确定性数据流的标识、精度和时钟。
 type SimulatorConfig struct {
 	StreamID          string
 	Symbol            string
@@ -20,14 +20,14 @@ type SimulatorConfig struct {
 	Now               func() time.Time
 }
 
-// Simulator emits a repeatable snapshot/ticker/trade/delta cycle.
+// Simulator 按可重复的快照、行情、成交、增量循环生成事件。
 type Simulator struct {
 	config       SimulatorConfig
 	sequence     uint64
 	currentPrice int64
 }
 
-// NewSimulator validates values so subsequent generation cannot overflow.
+// NewSimulator 校验数值，确保后续生成过程不会溢出。
 func NewSimulator(config SimulatorConfig) (*Simulator, error) {
 	if !streamIDPattern.MatchString(config.StreamID) || !protocolSymbolPattern.MatchString(config.Symbol) ||
 		config.PriceScale > 18 || config.QuantityScale > 18 || config.InitialPriceAtoms <= 0 ||
@@ -38,7 +38,7 @@ func NewSimulator(config SimulatorConfig) (*Simulator, error) {
 	return &Simulator{config: config, currentPrice: config.InitialPriceAtoms}, nil
 }
 
-// Next returns the next deterministic event with a monotonic sequence.
+// Next 返回下一条带单调递增序号的确定性事件。
 func (s *Simulator) Next() Event {
 	s.sequence++
 	event := Event{

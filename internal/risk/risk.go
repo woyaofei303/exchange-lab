@@ -1,9 +1,9 @@
-// Package risk defines read-only risk, funding and liquidation projections.
+// Package risk 定义只读的风险、资金费和清算投影。
 package risk
 
 import "time"
 
-// Snapshot is a versioned server-computed margin and liquidation projection.
+// Snapshot 是服务端计算的带版本保证金和清算投影。
 type Snapshot struct {
 	UserID                 int64
 	Symbol                 string
@@ -28,7 +28,7 @@ type Snapshot struct {
 	AsOf                   time.Time
 }
 
-// LiquidationRecord is the read model for one idempotent liquidation job.
+// LiquidationRecord 是一个幂等清算任务的读取模型。
 type LiquidationRecord struct {
 	ID                   string    `json:"id"`
 	Symbol               string    `json:"symbol"`
@@ -41,7 +41,7 @@ type LiquidationRecord struct {
 	UpdatedAt            time.Time `json:"updated_at"`
 }
 
-// FundingRecord is one scheduled or completed funding rate fact.
+// FundingRecord 表示一条已计划或已完成的资金费率事实。
 type FundingRecord struct {
 	ID               int64     `json:"id"`
 	Symbol           string    `json:"symbol"`
@@ -52,7 +52,7 @@ type FundingRecord struct {
 	Status           string    `json:"status"`
 }
 
-// FundingPayment is one user's exact signed settlement delta.
+// FundingPayment 表示一个用户精确的有符号结算差额。
 type FundingPayment struct {
 	FundingRateID     int64     `json:"funding_rate_id"`
 	Symbol            string    `json:"symbol"`
@@ -61,14 +61,14 @@ type FundingPayment struct {
 	SettledAt         time.Time `json:"settled_at"`
 }
 
-// InsuranceStatus reports the fund balance and unresolved ADL count.
+// InsuranceStatus 报告基金余额和未解决的 ADL 数量。
 type InsuranceStatus struct {
 	BalanceAtoms int64
 	ADLPending   int64
 	UpdatedAt    time.Time
 }
 
-// ConditionalOrder is a persisted reduce-only take-profit or stop-loss trigger.
+// ConditionalOrder 是持久化的只减仓止盈或止损触发器。
 type ConditionalOrder struct {
 	ID                string    `json:"id"`
 	UserID            int64     `json:"user_id"`

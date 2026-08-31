@@ -5,16 +5,16 @@ import (
 	"strings"
 )
 
-// Side identifies whether an order buys or sells the base asset.
+// Side 标识订单买入还是卖出基础资产。
 type Side string
 
-// Supported canonical order sides.
+// 支持的规范订单方向。
 const (
 	SideBuy  Side = "buy"
 	SideSell Side = "sell"
 )
 
-// ParseSide parses buy or sell case-insensitively.
+// ParseSide 以不区分大小写的方式解析买入或卖出方向。
 func ParseSide(text string) (Side, error) {
 	side := Side(strings.ToLower(text))
 	switch side {
@@ -25,7 +25,7 @@ func ParseSide(text string) (Side, error) {
 	}
 }
 
-// String returns the canonical lowercase side.
+// String 返回规范的小写订单方向。
 func (s Side) String() string {
 	return string(s)
 }

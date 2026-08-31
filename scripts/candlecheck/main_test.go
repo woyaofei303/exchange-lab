@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/candle"
+	"exchange-lab/internal/candle"
 )
 
 func TestValidateCandleMessageRequiresMatchingSubject(t *testing.T) {

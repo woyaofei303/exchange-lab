@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/woyaofei303/exchange-lab/internal/identity"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/identity"
+	"exchange-lab/internal/ledger"
+	"exchange-lab/internal/trading"
 )
 
 const ledgerScale = uint8(8)

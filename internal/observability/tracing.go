@@ -12,7 +12,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
-// SetupTracing configures W3C propagation and optional OTLP export, returning shutdown.
+// SetupTracing 配置 W3C 上下文传播和可选的 OTLP 导出，并返回关闭函数。
 func SetupTracing(ctx context.Context, service, endpoint string) (func(context.Context) error, error) {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 	if endpoint == "" {

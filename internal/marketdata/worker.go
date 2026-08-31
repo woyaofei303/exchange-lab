@@ -6,40 +6,40 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/market"
+	"exchange-lab/internal/market"
 )
 
-// ErrReconnectExhausted reports that the configured retry budget is spent.
+// ErrReconnectExhausted 表示配置的重试次数已耗尽。
 var ErrReconnectExhausted = errors.New("market reconnect limit exhausted")
 
-// Connection is the single-reader feed session used by Worker.
+// Connection 是 Worker 使用的单读取器行情会话。
 type Connection interface {
 	Read(context.Context) ([]byte, error)
 	Ping(context.Context) error
 	Close() error
 }
 
-// Connector opens one market-data session.
+// Connector 打开一个行情会话。
 type Connector interface {
 	Connect(context.Context) (Connection, error)
 }
 
-// Publisher distributes accepted normalized events.
+// Publisher 分发已接受的规范化事件。
 type Publisher interface {
 	Publish(context.Context, string, []byte) error
 }
 
-// TickerCache stores only the rebuildable latest-ticker projection.
+// TickerCache 仅存储可重建的最新行情投影。
 type TickerCache interface {
 	PutTicker(context.Context, market.Ticker) error
 }
 
-// GapReporter records sequence evidence before a session reconnects.
+// GapReporter 在会话重连前记录序列证据。
 type GapReporter interface {
 	ReportGap(context.Context, GapObservation)
 }
 
-// WorkerConfig bounds reconnect, heartbeat and downstream operations.
+// WorkerConfig 限制重连、心跳和下游操作。
 type WorkerConfig struct {
 	MaxReconnects     uint
 	InitialBackoff    time.Duration
@@ -49,7 +49,7 @@ type WorkerConfig struct {
 	Sleep             func(context.Context, time.Duration) error
 }
 
-// Worker validates, sequences and publishes one feed session at a time.
+// Worker 每次校验、排序并发布一个行情源会话。
 type Worker struct {
 	connector Connector
 	publisher Publisher
@@ -59,7 +59,7 @@ type Worker struct {
 	sequence  *Sequencer
 }
 
-// NewWorker validates all I/O dependencies and retry bounds.
+// NewWorker 校验所有 I/O 依赖和重试限制。
 func NewWorker(connector Connector, publisher Publisher, cache TickerCache, reporter GapReporter, config WorkerConfig) (*Worker, error) {
 	if connector == nil || publisher == nil || cache == nil || reporter == nil ||
 		config.InitialBackoff <= 0 || config.MaxBackoff < config.InitialBackoff ||
@@ -72,7 +72,7 @@ func NewWorker(connector Connector, publisher Publisher, cache TickerCache, repo
 	return &Worker{connector: connector, publisher: publisher, cache: cache, reporter: reporter, config: config, sequence: NewSequencer()}, nil
 }
 
-// Run reconnects with capped exponential backoff until cancellation or exhaustion.
+// Run 使用带上限的指数退避进行重连，直至取消或重试耗尽。
 func (w *Worker) Run(ctx context.Context) error {
 	for attempt := uint(0); ; attempt++ {
 		if err := ctx.Err(); err != nil {

@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds contract risk metadata and source-audited index/mark price history.
+-- 添加合约风险元数据和经过来源审计的指数/标记价格历史。
 CREATE TABLE contracts (
     symbol TEXT PRIMARY KEY REFERENCES instruments(symbol) ON DELETE RESTRICT,
     contract_size_atoms BIGINT NOT NULL CHECK (contract_size_atoms > 0),

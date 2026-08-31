@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/identity"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/identity"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/platform/rediscache"
 )
 
 type fakeIdentity struct {

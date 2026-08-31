@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/eventing"
+	"exchange-lab/internal/trading"
 )
 
 func TestDecodeExecutedTradeAcceptsCanonicalSnakeCasePayload(t *testing.T) {

@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds order state, lifecycle facts, idempotency and transactional Outbox storage.
+-- 添加订单状态、生命周期事实、幂等性和事务性 Outbox 存储。
 CREATE TABLE orders (
     id TEXT PRIMARY KEY CHECK (char_length(id) BETWEEN 1 AND 128),
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

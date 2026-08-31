@@ -12,15 +12,15 @@ type natsChecker struct {
 	jetStream  nats.JetStreamContext
 }
 
-// NewNATSChecker constructs a checker for connection and JetStream readiness.
+// NewNATSChecker 创建连接和 JetStream 就绪状态检查器。
 func NewNATSChecker(connection *nats.Conn, jetStream nats.JetStreamContext) Checker {
 	return natsChecker{connection: connection, jetStream: jetStream}
 }
 
-// Name returns the stable readiness dependency key.
+// Name 返回稳定的就绪检查依赖键。
 func (natsChecker) Name() string { return "nats" }
 
-// Check verifies a live connection and readable JetStream account information.
+// Check 校验连接存活且 JetStream 账户信息可读。
 func (c natsChecker) Check(ctx context.Context) error {
 	if c.connection.Status() != nats.CONNECTED {
 		return fmt.Errorf("nats connection is not connected")

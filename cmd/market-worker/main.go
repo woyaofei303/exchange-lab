@@ -1,4 +1,4 @@
-// Command market-worker validates, sequences and distributes market data.
+// Command market-worker 校验、排序并分发行情数据。
 package main
 
 import (
@@ -9,13 +9,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"exchange-lab/internal/config"
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/platform/natspublisher"
+	"exchange-lab/internal/platform/rediscache"
+	"exchange-lab/internal/platform/websocketfeed"
 	"github.com/nats-io/nats.go"
 	redisclient "github.com/redis/go-redis/v9"
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/platform/natspublisher"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
-	"github.com/woyaofei303/exchange-lab/internal/platform/websocketfeed"
 )
 
 func main() {
@@ -74,7 +74,7 @@ type slogGapReporter struct {
 	logger *slog.Logger
 }
 
-// ReportGap logs bounded sequence evidence without exposing payload data.
+// ReportGap 记录有界的序列证据，不暴露载荷数据。
 func (r slogGapReporter) ReportGap(_ context.Context, gap marketdata.GapObservation) {
 	r.logger.Warn("market sequence gap",
 		"stream_id", gap.StreamID, "symbol", gap.Symbol,

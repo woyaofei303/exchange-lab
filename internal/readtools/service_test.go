@@ -3,9 +3,9 @@ package readtools
 import (
 	"context"
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
+	"exchange-lab/internal/contractprice"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/risk"
 	"testing"
 	"time"
 )

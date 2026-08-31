@@ -1,6 +1,6 @@
 /**
- * Runtime boundary for untrusted API and WebSocket payloads.
- * Financial decimals intentionally remain strings; display conversion happens later.
+ * 不可信 API 和 WebSocket 载荷的运行时边界。
+ * 金融十进制数刻意保持为字符串，仅在后续显示阶段转换。
  */
 export type Instrument = {
   symbol: string
@@ -251,14 +251,14 @@ export function decodeOrders(value: unknown): Order[] {
   })
 }
 
-/** Strictly decodes the only supported realtime candle envelope version. */
+/** 严格解码唯一受支持的实时 K 线信封版本。 */
 export function decodeCandleUpdate(value: unknown): CandleUpdate {
   const envelope = record(value, 'candle update')
   if (envelope.version !== 1 || envelope.type !== 'candle') throw new Error('unsupported candle update')
   return { version: 1, type: 'candle', data: decodeCandle(envelope.data) }
 }
 
-/** Replaces one bucket by open time and returns chronological history. */
+/** 按开盘时间替换一个时间桶，并返回按时间顺序排列的历史记录。 */
 export function mergeCandle(history: Candle[], incoming: Candle): Candle[] {
   const result = history.filter((item) => item.open_time !== incoming.open_time)
   result.push(incoming)

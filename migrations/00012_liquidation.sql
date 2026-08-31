@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds idempotent liquidation jobs, orders and state-transition evidence.
+-- 添加幂等清算任务、订单和状态转换证据。
 CREATE TABLE liquidation_jobs (
     id TEXT PRIMARY KEY,
     idempotency_key TEXT NOT NULL UNIQUE,

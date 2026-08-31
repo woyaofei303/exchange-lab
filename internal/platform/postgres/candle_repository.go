@@ -6,29 +6,29 @@ import (
 	"regexp"
 	"time"
 
+	"exchange-lab/internal/candle"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
 )
 
-// CandleRepository owns trade deduplication and durable candle projections.
+// CandleRepository 负责成交去重和持久化 K 线投影。
 type CandleRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// CandleQuery aliases the domain query accepted by candle storage.
+// CandleQuery 是 K 线存储接受的领域查询别名。
 type CandleQuery = candle.Query
 
 var candleRepositorySymbolPattern = regexp.MustCompile(`^[A-Z0-9]{4,24}-PERP$`)
 
-// NewCandleRepository constructs a context-bounded candle repository.
+// NewCandleRepository 创建受上下文限制的 K 线仓储。
 func NewCandleRepository(pool *pgxpool.Pool, timeout time.Duration) *CandleRepository {
 	return &CandleRepository{pool: pool, timeout: timeout}
 }
 
-// ApplyTrade durably deduplicates a normalized trade and updates its 1m candle
-// in the same transaction. accepted is false for a previously stored event.
+// ApplyTrade 可靠去重一笔规范化成交，并在同一事务中更新其一分钟 K 线。
+// 对已经存储的事件，accepted 为 false。
 func (r *CandleRepository) ApplyTrade(ctx context.Context, trade candle.Trade) (result candle.Candle, accepted bool, resultErr error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return candle.Candle{}, false, fmt.Errorf("apply candle trade: invalid repository configuration")
@@ -117,7 +117,7 @@ func (r *CandleRepository) ApplyTrade(ctx context.Context, trade candle.Trade) (
 	return result, true, nil
 }
 
-// Upsert replaces one validated derived candle projection.
+// Upsert 替换一个已校验的派生 K 线投影。
 func (r *CandleRepository) Upsert(ctx context.Context, item candle.Candle) error {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return fmt.Errorf("upsert candle: invalid repository configuration")
@@ -159,7 +159,7 @@ func (r *CandleRepository) Upsert(ctx context.Context, item candle.Candle) error
 	return nil
 }
 
-// List returns a bounded, time-ordered half-open candle range.
+// List 返回有界、按时间排序且左闭右开的 K 线范围。
 func (r *CandleRepository) List(ctx context.Context, query candle.Query) ([]candle.Candle, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return nil, fmt.Errorf("list candles: invalid repository configuration")
@@ -195,7 +195,7 @@ func (r *CandleRepository) List(ctx context.Context, query candle.Query) ([]cand
 	return result, nil
 }
 
-// FinalizeBefore marks complete buckets and returns every changed candle.
+// FinalizeBefore 将已完成时间桶标记为最终状态，并返回所有变更的 K 线。
 func (r *CandleRepository) FinalizeBefore(ctx context.Context, symbol string, watermark time.Time) ([]candle.Candle, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || !candleRepositorySymbolPattern.MatchString(symbol) || watermark.IsZero() {
 		return nil, fmt.Errorf("finalize candles: invalid input")

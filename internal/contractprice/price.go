@@ -1,4 +1,4 @@
-// Package contractprice derives auditable index and bounded mark prices.
+// Package contractprice 计算可审计的指数价格和受限的标记价格。
 package contractprice
 
 import (
@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-// Price calculation errors distinguish malformed input from unavailable quorum.
+// 价格计算错误会区分输入格式错误和有效来源数量不足。
 var (
 	ErrInvalidPrice        = errors.New("invalid contract price input")
 	ErrInsufficientSources = errors.New("insufficient fresh price sources")
 )
 
-// Source is one named, weighted price observation in integer atoms.
+// Source 表示一个有名称、有权重且以整数最小单位记录的价格观测值。
 type Source struct {
 	Name       string
 	PriceAtoms int64
@@ -22,7 +22,7 @@ type Source struct {
 	UpdatedAt  time.Time
 }
 
-// IndexConfig defines freshness, deviation and quorum requirements.
+// IndexConfig 定义时效性、偏差和有效来源数量要求。
 type IndexConfig struct {
 	Now             time.Time
 	MaxAge          time.Duration
@@ -30,7 +30,7 @@ type IndexConfig struct {
 	MinimumSources  int
 }
 
-// IndexResult includes the derived price and its source-level audit evidence.
+// IndexResult 包含计算后的价格及来源级审计证据。
 type IndexResult struct {
 	PriceAtoms int64
 	Included   []string
@@ -39,8 +39,7 @@ type IndexResult struct {
 	AsOf       time.Time
 }
 
-// Snapshot is the authoritative risk price exposed to risk and transport
-// layers. Last trade price is deliberately absent.
+// Snapshot 是提供给风险层和传输层的权威风险价格，特意不包含最新成交价。
 type Snapshot struct {
 	Symbol          string
 	IndexAtoms      int64
@@ -53,7 +52,7 @@ type Snapshot struct {
 	AsOf            time.Time
 }
 
-// ComputeIndex rejects stale and median-deviating sources, then returns a weighted price.
+// ComputeIndex 剔除过期和偏离中位数的来源，然后返回加权价格。
 func ComputeIndex(sources []Source, config IndexConfig) (IndexResult, error) {
 	if config.Now.IsZero() || config.MaxAge <= 0 || config.MaxDeviationBPS < 0 || config.MaxDeviationBPS > 5_000 || config.MinimumSources < 1 || config.MinimumSources > 100 || len(sources) > 100 {
 		return IndexResult{}, ErrInvalidPrice
@@ -123,7 +122,7 @@ func ComputeIndex(sources []Source, config IndexConfig) (IndexResult, error) {
 	return IndexResult{PriceAtoms: price, Included: names, Excluded: excluded, Fresh: config.Now.Sub(asOf) <= config.MaxAge, AsOf: asOf}, nil
 }
 
-// ComputeMark applies a clamped premium to an index price using integer arithmetic.
+// ComputeMark 使用整数运算，将受限溢价应用于指数价格。
 func ComputeMark(indexAtoms, premiumBPS, maximumPremiumBPS int64) (int64, int64, error) {
 	if indexAtoms <= 0 || maximumPremiumBPS < 0 || maximumPremiumBPS > 5_000 {
 		return 0, 0, ErrInvalidPrice

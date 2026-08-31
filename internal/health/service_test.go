@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/health"
+	"exchange-lab/internal/health"
 )
 
 type checker struct {

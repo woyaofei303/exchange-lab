@@ -109,12 +109,12 @@ type statusWriter struct {
 	status int
 }
 
-// Unwrap exposes the underlying writer to optional HTTP interfaces.
+// Unwrap 向可选 HTTP 接口公开底层写入器。
 func (w *statusWriter) Unwrap() http.ResponseWriter {
 	return w.ResponseWriter
 }
 
-// WriteHeader records and forwards only the first response status.
+// WriteHeader 仅记录并转发第一个响应状态。
 func (w *statusWriter) WriteHeader(status int) {
 	if w.status != 0 {
 		return
@@ -123,7 +123,7 @@ func (w *statusWriter) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 
-// Write records an implicit 200 response before forwarding bytes.
+// Write 在转发字节前记录隐式的 200 响应。
 func (w *statusWriter) Write(payload []byte) (int, error) {
 	if w.status == 0 {
 		w.WriteHeader(http.StatusOK)

@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/eventing"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
 )
 
-// EventRepository owns Outbox leases, receipts, deduplication and parking.
+// EventRepository 管理 Outbox 租约、回执、去重和停放操作。
 type EventRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewEventRepository constructs a context-bounded durable event repository.
+// NewEventRepository 创建受上下文限制的持久事件仓储。
 func NewEventRepository(pool *pgxpool.Pool, timeout time.Duration) *EventRepository {
 	return &EventRepository{pool: pool, timeout: timeout}
 }
 
-// Claim leases a bounded ordered batch using SKIP LOCKED for concurrent publishers.
+// Claim 使用 SKIP LOCKED 为并发发布器租用一个有界有序批次。
 func (r *EventRepository) Claim(ctx context.Context, limit int, lease time.Duration) ([]eventing.OutboxEvent, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || limit < 1 || limit > 1000 || lease <= 0 {
 		return nil, fmt.Errorf("claim outbox: invalid configuration")
@@ -61,7 +61,7 @@ func (r *EventRepository) Claim(ctx context.Context, limit int, lease time.Durat
 	return result, nil
 }
 
-// MarkPublished completes exactly one currently leased Outbox event.
+// MarkPublished 完成当前已租用的一个 Outbox 事件。
 func (r *EventRepository) MarkPublished(ctx context.Context, id string, publishedAt time.Time) error {
 	operation, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -75,7 +75,7 @@ func (r *EventRepository) MarkPublished(ctx context.Context, id string, publishe
 	return nil
 }
 
-// MarkFailed schedules bounded retry or parks an exhausted Outbox event.
+// MarkFailed 安排有界重试，或停放重试耗尽的 Outbox 事件。
 func (r *EventRepository) MarkFailed(ctx context.Context, event eventing.OutboxEvent, reasonCode string, failedAt time.Time) error {
 	if reasonCode == "" || len(reasonCode) > 64 {
 		return fmt.Errorf("mark outbox failed: invalid reason")
@@ -98,7 +98,7 @@ func (r *EventRepository) MarkFailed(ctx context.Context, event eventing.OutboxE
 	return nil
 }
 
-// RecordReceipt atomically deduplicates an event and appends its receipt side effect.
+// RecordReceipt 原子去重事件，并追加其回执副作用。
 func (r *EventRepository) RecordReceipt(ctx context.Context, consumer string, envelope eventing.Envelope, receivedAt time.Time) (bool, error) {
 	if consumer == "" || len(consumer) > 128 || envelope.ID == "" {
 		return false, fmt.Errorf("record event receipt: invalid input")
@@ -129,7 +129,7 @@ func (r *EventRepository) RecordReceipt(ctx context.Context, consumer string, en
 	return true, nil
 }
 
-// Park records a terminal consumer failure without deleting the original payload.
+// Park 记录消费者最终失败，但不删除原始载荷。
 func (r *EventRepository) Park(ctx context.Context, consumer string, envelope eventing.Envelope, payload []byte, deliveryCount uint64, reasonCode string, parkedAt time.Time) error {
 	if consumer == "" || envelope.ID == "" || deliveryCount == 0 || reasonCode == "" {
 		return fmt.Errorf("park event: invalid input")
@@ -161,7 +161,7 @@ func retryDelay(attempt int) time.Duration {
 	}
 }
 
-// IsSerializationFailure reports PostgreSQL SQLSTATE 40001 for bounded retry.
+// IsSerializationFailure 表示是否为可进行有界重试的 PostgreSQL SQLSTATE 40001。
 func IsSerializationFailure(err error) bool {
 	var postgresError interface{ SQLState() string }
 	return errors.As(err, &postgresError) && postgresError.SQLState() == "40001"

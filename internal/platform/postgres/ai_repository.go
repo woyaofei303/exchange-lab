@@ -2,24 +2,25 @@ package postgres
 
 import (
 	"context"
+	"exchange-lab/internal/ai"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/ai"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// AIRepository persists explanation metadata and evidence, never model credentials.
+// AIRepository 持久化解释元数据和证据，绝不存储模型凭据。
 type AIRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewAIRepository constructs the bounded AI audit repository.
+// NewAIRepository 创建有界的 AI 审计仓储。
 func NewAIRepository(pool *pgxpool.Pool, timeout time.Duration) *AIRepository {
 	return &AIRepository{pool: pool, timeout: timeout}
 }
 
-// Record appends one AI run audit fact.
+// Record 追加一条 AI 运行审计事实。
 func (r *AIRepository) Record(ctx context.Context, record ai.RunRecord) error {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

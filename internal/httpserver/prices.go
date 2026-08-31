@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/contractprice"
+	"exchange-lab/internal/trading"
 )
 
-// PriceReader returns the current source-audited contract price.
+// PriceReader 返回当前经过来源审计的合约价格。
 type PriceReader interface {
 	Latest(context.Context, string) (contractprice.Snapshot, error)
 }

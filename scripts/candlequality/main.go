@@ -1,4 +1,4 @@
-// Command candlequality checks persisted candle continuity and invariants.
+// Command candlequality 检查持久化 K 线的连续性和不变量。
 package main
 
 import (

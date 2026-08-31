@@ -28,7 +28,7 @@ func TestFindForbiddenFloatTypesIgnoresCommentsAndStrings(t *testing.T) {
 	t.Parallel()
 
 	directory := t.TempDir()
-	writeGoFile(t, directory, "safe.go", "package trading\n// float64 is forbidden here.\nconst rule = `float32`\n")
+	writeGoFile(t, directory, "safe.go", "package trading\n// 此处禁止使用 float64。\nconst rule = `float32`\n")
 
 	findings, err := findForbiddenFloatTypes(directory)
 	if err != nil {

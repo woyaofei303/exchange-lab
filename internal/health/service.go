@@ -1,4 +1,4 @@
-// Package health reports liveness-independent dependency readiness.
+// Package health 报告独立于存活状态的依赖就绪情况。
 package health
 
 import (
@@ -7,40 +7,39 @@ import (
 	"time"
 )
 
-// Stable dependency status values exposed by readiness responses.
+// 就绪响应公开的稳定依赖状态值。
 const (
 	StatusOK    = "ok"
 	StatusError = "error"
 )
 
-// Checker verifies one named dependency within the supplied context.
+// Checker 在提供的上下文中检查一个具名依赖。
 type Checker interface {
 	Name() string
-	// Check verifies the dependency. Implementations MUST honor cancellation
-	// and deadlines in ctx, returning promptly after ctx.Done is closed.
-	// Service.Check's completion bound depends on this invariant.
+	// Check 检查依赖。实现必须遵守 ctx 的取消信号和截止时间，
+	// 并在 ctx.Done 关闭后立即返回；Service.Check 的完成时间上限依赖此约束。
 	Check(ctx context.Context) error
 }
 
-// Report contains sanitized statuses plus internal errors for logging.
+// Report 包含脱敏后的状态，以及仅供日志记录的内部错误。
 type Report struct {
 	Ready  bool
 	Checks map[string]string
 	Errors map[string]error
 }
 
-// Service evaluates independent dependency checks concurrently with a timeout.
+// Service 并发执行相互独立且带超时的依赖检查。
 type Service struct {
 	timeout  time.Duration
 	checkers []Checker
 }
 
-// NewService copies the checker list so callers cannot mutate service configuration.
+// NewService 复制检查器列表，防止调用方修改服务配置。
 func NewService(timeout time.Duration, checkers ...Checker) *Service {
 	return &Service{timeout: timeout, checkers: append([]Checker(nil), checkers...)}
 }
 
-// Check waits for every bounded dependency check and returns one readiness snapshot.
+// Check 等待所有有界依赖检查完成，并返回一份就绪状态快照。
 func (s *Service) Check(ctx context.Context) Report {
 	report := Report{
 		Ready:  true,

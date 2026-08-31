@@ -1,4 +1,4 @@
-// Package rediscache owns rebuildable caches and fail-closed security state.
+// Package rediscache 管理可重建缓存和失败关闭的安全状态。
 package rediscache
 
 import (

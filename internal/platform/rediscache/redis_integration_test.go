@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/platform/rediscache"
+	"exchange-lab/internal/trading"
 	redisclient "github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
 func TestRedisCacheRateLimitDenylistAndFailureFallback(t *testing.T) {

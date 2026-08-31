@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds isolated collateral, leverage settings, risk limits and margin adjustments.
+-- 添加逐仓抵押品、杠杆设置、风险限制和保证金调整。
 CREATE TABLE margin_accounts (
     user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE RESTRICT,
     mode TEXT NOT NULL DEFAULT 'isolated' CHECK (mode IN ('isolated','cross')),

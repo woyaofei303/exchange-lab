@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds durable consumer deduplication, receipts and terminal parking evidence.
+-- 添加持久消费者去重、回执和最终停放证据。
 CREATE TABLE processed_events (
     consumer_name TEXT NOT NULL CHECK (char_length(consumer_name) BETWEEN 1 AND 128),
     event_id TEXT NOT NULL CHECK (char_length(event_id) BETWEEN 1 AND 128),

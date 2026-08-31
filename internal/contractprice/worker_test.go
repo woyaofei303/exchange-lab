@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
+	"exchange-lab/internal/marketdata"
 )
 
 type workerStore struct {

@@ -1,4 +1,4 @@
-// Command candle-worker aggregates normalized trades into durable candles.
+// Command candle-worker 将规范化成交聚合为持久化 K 线。
 package main
 
 import (
@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/config"
+	"exchange-lab/internal/platform/natspublisher"
+	store "exchange-lab/internal/platform/postgres"
 	"github.com/nats-io/nats.go"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	"github.com/woyaofei303/exchange-lab/internal/platform/natspublisher"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
 )
 
 func main() {

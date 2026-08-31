@@ -1,4 +1,4 @@
-// Command composeverify checks rendered Compose configuration safety rules.
+// Command composeverify 检查渲染后的 Compose 配置安全规则。
 package main
 
 import (

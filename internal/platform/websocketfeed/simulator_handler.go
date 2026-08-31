@@ -6,20 +6,20 @@ import (
 	"net/http"
 	"time"
 
+	"exchange-lab/internal/marketdata"
 	"github.com/coder/websocket"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
 )
 
-// SimulatorFactory creates isolated deterministic state for each connection.
+// SimulatorFactory 为每个连接创建隔离的确定性状态。
 type SimulatorFactory func() (*marketdata.Simulator, error)
 
-// SimulatorHandler streams normalized events at a fixed interval.
+// SimulatorHandler 按固定间隔流式发送规范化事件。
 type SimulatorHandler struct {
 	interval time.Duration
 	factory  SimulatorFactory
 }
 
-// NewSimulatorHandler validates the event cadence and per-connection factory.
+// NewSimulatorHandler 校验事件发送节奏和逐连接工厂。
 func NewSimulatorHandler(interval time.Duration, factory SimulatorFactory) (*SimulatorHandler, error) {
 	if interval <= 0 || factory == nil {
 		return nil, fmt.Errorf("create simulator handler: invalid configuration")
@@ -27,7 +27,7 @@ func NewSimulatorHandler(interval time.Duration, factory SimulatorFactory) (*Sim
 	return &SimulatorHandler{interval: interval, factory: factory}, nil
 }
 
-// ServeHTTP upgrades a request and writes one event per configured interval.
+// ServeHTTP 升级请求，并按配置间隔写入一个事件。
 func (h *SimulatorHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	simulator, err := h.factory()
 	if err != nil {

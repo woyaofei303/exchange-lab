@@ -16,7 +16,7 @@ const (
 	maximumPasswordBytes = 1024
 )
 
-// PasswordHasher owns bounded Argon2id parameters and its entropy source.
+// PasswordHasher 管理有界的 Argon2id 参数及其熵源。
 type PasswordHasher struct {
 	MemoryKiB   uint32
 	Iterations  uint32
@@ -26,12 +26,12 @@ type PasswordHasher struct {
 	Random      io.Reader
 }
 
-// DefaultPasswordHasher returns the reviewed local Argon2id profile.
+// DefaultPasswordHasher 返回经过审查的本地 Argon2id 配置。
 func DefaultPasswordHasher() PasswordHasher {
 	return PasswordHasher{MemoryKiB: 19 * 1024, Iterations: 2, Parallelism: 1, SaltLength: 16, KeyLength: 32, Random: rand.Reader}
 }
 
-// Hash creates a salted encoded Argon2id value without retaining plaintext.
+// Hash 创建加盐编码后的 Argon2id 值，不保留明文。
 func (h PasswordHasher) Hash(password string) (string, error) {
 	if len(password) < minimumPasswordBytes || len(password) > maximumPasswordBytes || !h.valid() {
 		return "", fmt.Errorf("hash password: invalid input")
@@ -45,7 +45,7 @@ func (h PasswordHasher) Hash(password string) (string, error) {
 		base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(key)), nil
 }
 
-// Verify bounds untrusted encoded parameters before constant-time comparison.
+// Verify 在常量时间比较前限制不可信编码参数。
 func (h PasswordHasher) Verify(encoded, password string) bool {
 	if len(password) < minimumPasswordBytes || len(password) > maximumPasswordBytes {
 		return false

@@ -1,4 +1,4 @@
-// Command marketcheck verifies the live normalized market-data pipeline.
+// Command marketcheck 验证实时规范化行情流水线。
 package main
 
 import (
@@ -8,10 +8,10 @@ import (
 	"os"
 	"time"
 
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/platform/rediscache"
 	"github.com/nats-io/nats.go"
 	redisclient "github.com/redis/go-redis/v9"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
 )
 
 func main() {

@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds premium observations, funding rates and exact user settlements.
+-- 添加溢价观测、资金费率和精确用户结算。
 CREATE TABLE premium_indexes (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     symbol TEXT NOT NULL REFERENCES contracts(symbol) ON DELETE RESTRICT,

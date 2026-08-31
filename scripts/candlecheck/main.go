@@ -1,4 +1,4 @@
-// Command candlecheck verifies the running candle pipeline end to end.
+// Command candlecheck 端到端验证运行中的 K 线流水线。
 package main
 
 import (
@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"exchange-lab/internal/candle"
 	"github.com/coder/websocket"
 	"github.com/nats-io/nats.go"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
 )
 
 func main() {

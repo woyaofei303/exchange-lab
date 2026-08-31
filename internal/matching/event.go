@@ -6,11 +6,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/eventing"
+	"exchange-lab/internal/trading"
 )
 
-// OrderEvent is the strict matching input decoded from a durable envelope.
+// OrderEvent 是从持久化信封中解码出的严格撮合输入。
 type OrderEvent struct {
 	OrderID        string
 	UserID         int64
@@ -42,7 +42,7 @@ type orderEventPayload struct {
 	OccurredAt     time.Time           `json:"occurred_at"`
 }
 
-// DecodeOrderEvent accepts only versioned limit-order acceptance or cancellation facts.
+// DecodeOrderEvent 仅接受带版本的限价单接受或取消事实。
 func DecodeOrderEvent(envelope eventing.Envelope) (OrderEvent, error) {
 	if envelope.Type != "orders.accepted" && envelope.Type != "orders.cancel_requested" {
 		return OrderEvent{}, ErrInvalidOrder

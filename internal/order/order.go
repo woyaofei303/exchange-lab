@@ -1,4 +1,4 @@
-// Package order validates limit-order state and coordinates atomic persistence.
+// Package order 校验限价单状态并协调原子持久化。
 package order
 
 import (
@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// Order errors classify validation, lifecycle, ownership and replay conflicts.
+// 订单错误按校验、生命周期、所有权和重放冲突分类。
 var (
 	ErrInvalid           = errors.New("invalid order")
 	ErrInvalidTransition = errors.New("invalid order transition")
@@ -19,7 +19,7 @@ var (
 	ErrConflict          = errors.New("order idempotency conflict")
 )
 
-// Order is the exact persisted state of one user limit order.
+// Order 表示一笔用户限价单的精确持久化状态。
 type Order struct {
 	ID                  string
 	UserID              int64
@@ -40,7 +40,7 @@ type Order struct {
 	UpdatedAt           time.Time
 }
 
-// NewLimit validates instrument filters and reserves ceiling initial margin.
+// NewLimit 校验交易品种过滤规则，并预留向上取整的初始保证金。
 func NewLimit(id string, userID int64, clientOrderID string, instrument trading.Instrument, side trading.Side, price trading.Price, quantity trading.Quantity, leverage int64) (Order, error) {
 	if len(id) < 1 || len(id) > 128 || userID <= 0 || len(clientOrderID) < 8 || len(clientOrderID) > 128 || leverage < 1 || leverage > 125 {
 		return Order{}, ErrInvalid
@@ -68,7 +68,7 @@ func NewLimit(id string, userID int64, clientOrderID string, instrument trading.
 	}, nil
 }
 
-// Accept transitions a validated pending order to open.
+// Accept 将已校验的待处理订单转换为开放状态。
 func (o Order) Accept() (Order, error) {
 	if o.Status != trading.OrderStatusPending || !o.valid() {
 		return Order{}, ErrInvalidTransition
@@ -77,7 +77,7 @@ func (o Order) Accept() (Order, error) {
 	return o, nil
 }
 
-// Cancel closes an active order and returns the margin atoms to release.
+// Cancel 关闭有效订单，并返回应释放的保证金最小单位数量。
 func (o Order) Cancel() (Order, int64, error) {
 	if (o.Status != trading.OrderStatusPending && o.Status != trading.OrderStatusOpen && o.Status != trading.OrderStatusPartiallyFilled) || !o.valid() {
 		return Order{}, 0, ErrInvalidTransition

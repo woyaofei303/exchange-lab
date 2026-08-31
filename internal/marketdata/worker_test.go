@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/marketdata"
 )
 
 func TestWorkerPublishesAcceptedEventsCachesTickerAndDropsDuplicates(t *testing.T) {

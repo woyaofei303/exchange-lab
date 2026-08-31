@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/realtime"
 	"github.com/coder/websocket"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/realtime"
 )
 
 type candlesResponse struct {

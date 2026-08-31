@@ -1,16 +1,16 @@
 /**
- * Reconnecting candle WebSocket adapter.
- * Frames remain untrusted until decoded by the versioned runtime contract.
+ * 支持重连的 K 线 WebSocket 适配器。
+ * 帧在经过带版本的运行时契约解码前始终视为不可信数据。
  */
 import { decodeCandleUpdate, type Candle, type CandleUpdate } from './contract'
 
-/** User-visible connection states emitted by CandleStream. */
+/** CandleStream 发出的用户可见连接状态。 */
 export type ConnectionState = 'connecting' | 'live' | 'reconnecting' | 'offline'
 
 type SocketLike = Pick<WebSocket, 'close' | 'onclose' | 'onerror' | 'onmessage' | 'onopen'>
 type SocketFactory = (url: string) => SocketLike
 
-/** Owns one socket at a time and reconnects with capped exponential backoff. */
+/** 同一时间只管理一个套接字，并使用带上限的指数退避重连。 */
 export class CandleStream {
   private socket?: SocketLike
   private stopped = false
@@ -52,7 +52,7 @@ export class CandleStream {
       try {
         this.onUpdate(decodeCandleUpdate(JSON.parse(event.data)))
       } catch {
-        // Untrusted frames are ignored at the contract boundary.
+        // 在契约边界忽略不可信帧。
       }
     }
     socket.onerror = () => socket.close()
@@ -68,7 +68,7 @@ export class CandleStream {
   }
 }
 
-/** Builds a same-origin WebSocket URL, preserving HTTPS through wss. */
+/** 构建同源 WebSocket URL，并通过 wss 保持 HTTPS 安全性。 */
 export function candleWebSocketURL(symbol: string, interval: Candle['interval']): string {
   const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const query = new URLSearchParams({ symbol, interval })

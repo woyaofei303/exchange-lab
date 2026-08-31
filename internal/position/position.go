@@ -1,4 +1,4 @@
-// Package position applies fills to one-way positions and calculates exact PnL.
+// Package position 将成交应用到单向持仓并计算精确盈亏。
 package position
 
 import (
@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/fixedmath"
 )
 
-// View is the persisted position projection exposed to read boundaries.
+// View 是向读取边界公开的持久化仓位投影。
 type View struct {
 	UserID                                                                                     int64
 	Symbol                                                                                     string
@@ -19,22 +19,22 @@ type View struct {
 	UpdatedAt                                                                                  time.Time
 }
 
-// Position errors reject malformed fills and invalid reduce-only effects.
+// 仓位错误用于拒绝格式错误的成交和无效的只减仓结果。
 var (
 	ErrInvalidFill = errors.New("invalid fill")
 	ErrReduceOnly  = errors.New("reduce-only fill would expand or reverse position")
 )
 
-// Side is the signed direction of an applied fill.
+// Side 表示已应用成交的有符号方向。
 type Side string
 
-// Supported fill directions.
+// 支持的成交方向。
 const (
 	Buy  Side = "buy"
 	Sell Side = "sell"
 )
 
-// State is the minimal one-way position state needed for deterministic PnL.
+// State 是确定性计算盈亏所需的最小单向持仓状态。
 type State struct {
 	Symbol          string
 	SizeAtoms       int64
@@ -43,7 +43,7 @@ type State struct {
 	PriceScale      uint8
 }
 
-// Fill describes one execution applied to a position.
+// Fill 描述应用到仓位的一笔成交。
 type Fill struct {
 	Side          Side
 	PriceAtoms    int64
@@ -51,7 +51,7 @@ type Fill struct {
 	ReduceOnly    bool
 }
 
-// ApplyFill updates a one-way position and returns the realized quote PnL atoms.
+// ApplyFill 更新单向持仓并返回已实现的报价资产盈亏最小单位。
 func ApplyFill(current State, fill Fill) (State, int64, error) {
 	if (fill.Side != Buy && fill.Side != Sell) || fill.PriceAtoms <= 0 || fill.QuantityAtoms <= 0 || current.QuantityScale > 18 || current.PriceScale > 18 {
 		return State{}, 0, ErrInvalidFill
@@ -108,7 +108,7 @@ func ApplyFill(current State, fill Fill) (State, int64, error) {
 	return current, realized, nil
 }
 
-// UnrealizedPnL values a signed position against the supplied mark price.
+// UnrealizedPnL 根据给定标记价格计算有符号仓位的未实现盈亏。
 func UnrealizedPnL(state State, markPriceAtoms int64) (int64, error) {
 	if state.SizeAtoms == 0 {
 		return 0, nil

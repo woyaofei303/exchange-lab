@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/insurance"
+	"exchange-lab/internal/position"
 	"github.com/jackc/pgx/v5"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
-	"github.com/woyaofei303/exchange-lab/internal/insurance"
-	"github.com/woyaofei303/exchange-lab/internal/position"
 )
 
-// ProcessLiquidations settles a bounded batch of pending jobs transactionally.
+// ProcessLiquidations 在事务中结算有界批次的待处理任务。
 func (r *RiskRepository) ProcessLiquidations(ctx context.Context, at time.Time) (int, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

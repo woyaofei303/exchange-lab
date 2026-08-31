@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/platform/natspublisher"
+	"exchange-lab/internal/platform/natspublisher"
 )
 
 func TestCorePublisherPublishesAndFlushesWithinContext(t *testing.T) {

@@ -3,64 +3,64 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"exchange-lab/internal/contractprice"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/readtools"
+	"exchange-lab/internal/risk"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/readtools"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
 	"time"
 )
 
-// ToolSource composes existing repositories behind the read-only tool contract.
+// ToolSource 在只读工具契约后组合现有仓储。
 type ToolSource struct {
 	positions *PositionRepository
 	risk      *RiskRepository
 	prices    *PriceRepository
 }
 
-// NewToolSource constructs a shared read-only evidence source.
+// NewToolSource 创建共享的只读证据来源。
 func NewToolSource(pool *pgxpool.Pool, timeout time.Duration) *ToolSource {
 	return &ToolSource{NewPositionRepository(pool, timeout), NewRiskRepository(pool, timeout), NewPriceRepository(pool, timeout)}
 }
 
-// Positions returns persisted positions for one principal.
+// Positions 返回一个主体的持久化仓位。
 func (s *ToolSource) Positions(ctx context.Context, user int64) ([]position.View, error) {
 	return s.positions.List(ctx, user)
 }
 
-// Risk returns a server-computed risk snapshot for one principal and symbol.
+// Risk 返回一个主体和交易对的服务端计算风险快照。
 func (s *ToolSource) Risk(ctx context.Context, user int64, symbol string) (risk.Snapshot, error) {
 	return s.risk.Snapshot(ctx, user, symbol)
 }
 
-// Price returns the latest audited mark-price evidence.
+// Price 返回最新的已审计标记价格证据。
 func (s *ToolSource) Price(ctx context.Context, symbol string) (contractprice.Snapshot, error) {
 	return s.prices.Latest(ctx, symbol)
 }
 
-// Funding returns bounded funding history for a symbol.
+// Funding 返回一个交易对的有界资金费历史。
 func (s *ToolSource) Funding(ctx context.Context, symbol string) ([]risk.FundingRecord, error) {
 	return s.risk.FundingHistory(ctx, symbol)
 }
 
-// Liquidations returns user-scoped liquidation history.
+// Liquidations 返回限定到用户范围的清算历史。
 func (s *ToolSource) Liquidations(ctx context.Context, user int64) ([]risk.LiquidationRecord, error) {
 	return s.risk.Liquidations(ctx, user)
 }
 
-// ToolAuditRepository persists the scope and evidence of every tool call.
+// ToolAuditRepository 持久化每次工具调用的范围和证据。
 type ToolAuditRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewToolAuditRepository constructs a context-bounded tool audit sink.
+// NewToolAuditRepository 创建受上下文限制的工具审计接收端。
 func NewToolAuditRepository(pool *pgxpool.Pool, timeout time.Duration) *ToolAuditRepository {
 	return &ToolAuditRepository{pool, timeout}
 }
 
-// RecordTool appends one read-only tool audit fact.
+// RecordTool 追加一条只读工具审计事实。
 func (r *ToolAuditRepository) RecordTool(ctx context.Context, record readtools.AuditRecord) error {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

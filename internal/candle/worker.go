@@ -9,11 +9,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/trading"
 )
 
-// Query defines a bounded half-open candle history range.
+// Query 定义有界的左闭右开 K 线历史范围。
 type Query struct {
 	Symbol   string
 	Interval Interval
@@ -22,7 +22,7 @@ type Query struct {
 	Limit    int
 }
 
-// Store atomically deduplicates trades and persists base and rollup candles.
+// Store 以原子方式对成交去重，并持久化基础和聚合 K 线。
 type Store interface {
 	ApplyTrade(context.Context, Trade) (Candle, bool, error)
 	Upsert(context.Context, Candle) error
@@ -30,33 +30,33 @@ type Store interface {
 	FinalizeBefore(context.Context, string, time.Time) ([]Candle, error)
 }
 
-// Publisher emits candle updates after persistence.
+// Publisher 在持久化后发布 K 线更新。
 type Publisher interface {
 	Publish(context.Context, string, []byte) error
 }
 
-// WorkerConfig defines exact source scales and the publication timeout.
+// WorkerConfig 定义精确的来源精度和发布超时时间。
 type WorkerConfig struct {
 	PriceScale       uint8
 	QuantityScale    uint8
 	OperationTimeout time.Duration
 }
 
-// Worker consumes normalized trades and maintains durable candle projections.
+// Worker 消费规范化成交并维护持久化 K 线投影。
 type Worker struct {
 	store     Store
 	publisher Publisher
 	config    WorkerConfig
 }
 
-// Update is the versioned realtime candle envelope.
+// Update 是带版本的实时 K 线信封。
 type Update struct {
 	Version int    `json:"version"`
 	Type    string `json:"type"`
 	Data    View   `json:"data"`
 }
 
-// NewWorker validates candle persistence, publication and scale configuration.
+// NewWorker 校验 K 线持久化、发布和精度配置。
 func NewWorker(store Store, publisher Publisher, config WorkerConfig) (*Worker, error) {
 	if store == nil || publisher == nil || config.PriceScale > 18 || config.QuantityScale > 18 || config.OperationTimeout <= 0 {
 		return nil, fmt.Errorf("create candle worker: invalid configuration")
@@ -64,7 +64,7 @@ func NewWorker(store Store, publisher Publisher, config WorkerConfig) (*Worker, 
 	return &Worker{store: store, publisher: publisher, config: config}, nil
 }
 
-// Handle applies one trade idempotently, finalizes old buckets and rebuilds rollups.
+// Handle 幂等应用一笔成交、结束旧时间桶并重建聚合 K 线。
 func (w *Worker) Handle(ctx context.Context, payload []byte) error {
 	event, err := marketdata.Decode(payload)
 	if err != nil || event.Type != marketdata.EventTrade || event.Trade == nil {
@@ -110,7 +110,7 @@ func (w *Worker) Handle(ctx context.Context, payload []byte) error {
 	return nil
 }
 
-// Repair fills a bounded one-minute range and rebuilds every affected rollup.
+// Repair 填补有界的一分钟周期范围，并重建所有受影响的聚合 K 线。
 func (w *Worker) Repair(ctx context.Context, symbol string, start, end time.Time) error {
 	source, err := w.store.List(ctx, Query{Symbol: symbol, Interval: OneMinute, Start: start, End: end, Limit: 1000})
 	if err != nil {
@@ -194,7 +194,7 @@ func (w *Worker) publish(ctx context.Context, item Candle) error {
 	return nil
 }
 
-// EncodeUpdate validates and serializes one realtime candle update.
+// EncodeUpdate 校验并序列化一条实时 K 线更新。
 func EncodeUpdate(update Update) ([]byte, error) {
 	if err := validateUpdate(update); err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func EncodeUpdate(update Update) ([]byte, error) {
 	return payload, nil
 }
 
-// DecodeUpdate strictly parses one bounded realtime candle update.
+// DecodeUpdate 严格解析一条有界的实时 K 线更新。
 func DecodeUpdate(payload []byte) (Update, error) {
 	if len(payload) == 0 || len(payload) > 1<<20 {
 		return Update{}, fmt.Errorf("decode candle update: invalid payload size")
@@ -227,7 +227,7 @@ func DecodeUpdate(payload []byte) (Update, error) {
 	return update, nil
 }
 
-// UpdateSubject derives the stable symbol-and-interval NATS subject.
+// UpdateSubject 生成稳定的交易对和周期 NATS 主题。
 func UpdateSubject(update Update) (string, error) {
 	if err := validateUpdate(update); err != nil {
 		return "", err

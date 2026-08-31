@@ -1,9 +1,9 @@
 package marketdata
 
-// Disposition is the result of checking one event against stream sequence state.
+// Disposition 表示根据流序列状态检查一个事件的结果。
 type Disposition string
 
-// Sequencer outcomes; gaps require reconnect and snapshot recovery.
+// 序列检查结果；出现缺口时需要重连并恢复快照。
 const (
 	Accepted   Disposition = "accepted"
 	Duplicate  Disposition = "duplicate"
@@ -11,7 +11,7 @@ const (
 	Gap        Disposition = "gap"
 )
 
-// GapObservation records the expected and received sequence for diagnostics.
+// GapObservation 记录预期和实际收到的序号，用于诊断。
 type GapObservation struct {
 	StreamID string
 	Symbol   string
@@ -19,7 +19,7 @@ type GapObservation struct {
 	Received uint64
 }
 
-// SequenceObservation contains a disposition and optional gap evidence.
+// SequenceObservation 包含处理结果和可选的缺口证据。
 type SequenceObservation struct {
 	Disposition Disposition
 	Gap         GapObservation
@@ -30,17 +30,17 @@ type sequenceState struct {
 	last     uint64
 }
 
-// Sequencer tracks the last accepted sequence independently for each symbol.
+// Sequencer 分别跟踪每个交易对最后接受的序号。
 type Sequencer struct {
 	bySymbol map[string]sequenceState
 }
 
-// NewSequencer returns an empty sequence state machine.
+// NewSequencer 返回空的序列状态机。
 func NewSequencer() *Sequencer {
 	return &Sequencer{bySymbol: make(map[string]sequenceState)}
 }
 
-// Observe accepts new streams only from a snapshot and never skips a gap.
+// Observe 仅从快照开始接受新数据流，绝不跳过序列缺口。
 func (s *Sequencer) Observe(event Event) SequenceObservation {
 	state, exists := s.bySymbol[event.Symbol]
 	if !exists || state.streamID != event.StreamID {

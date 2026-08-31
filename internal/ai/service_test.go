@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
+	"exchange-lab/internal/risk"
 	"testing"
 	"time"
 )

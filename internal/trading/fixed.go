@@ -12,9 +12,8 @@ type fixed struct {
 	scale uint8
 }
 
-// FormatDecimal renders integer atoms at an explicit decimal scale without
-// passing through binary floating point. It is used at persistence and
-// transport boundaries that store atoms and scale separately.
+// FormatDecimal 按明确的小数精度格式化整数最小单位，不经过二进制浮点数。
+// 它用于分别存储最小单位和精度的持久化及传输边界。
 func FormatDecimal(atoms int64, scale uint8) (string, error) {
 	if scale > maxScale {
 		return "", fmt.Errorf("format decimal: %w: scale must not exceed %d", ErrInvalidScale, maxScale)
@@ -75,7 +74,7 @@ func parseFixed(value string, scale uint8) (fixed, error) {
 	return fixed{atoms: atoms, scale: scale}, nil
 }
 
-// String renders the exact fixed-scale decimal without exponent notation.
+// String 返回不使用指数记法的精确定点十进制数。
 func (v fixed) String() string {
 	digits := strconv.FormatInt(v.atoms, 10)
 	sign := ""

@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/trading"
 )
 
 type marketCache struct {

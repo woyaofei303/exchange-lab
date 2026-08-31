@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/market"
+	domainorder "exchange-lab/internal/order"
+	"exchange-lab/internal/trading"
 )
 
 type fakeOrders struct {

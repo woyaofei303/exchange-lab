@@ -1,4 +1,4 @@
-// Command eventcheck verifies durable event delivery and idempotent effects.
+// Command eventcheck 验证可靠事件投递和幂等效果。
 package main
 
 import (
@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
+	"exchange-lab/internal/eventing"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
 )
 
 func main() {

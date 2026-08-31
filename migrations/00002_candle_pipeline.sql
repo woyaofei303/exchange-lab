@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds event-time candle ordering evidence and durable market-trade deduplication.
+-- 添加基于事件时间的 K 线排序证据和持久化市场成交去重。
 ALTER TABLE candles
     ADD COLUMN first_trade_time TIMESTAMPTZ,
     ADD COLUMN last_trade_time TIMESTAMPTZ,

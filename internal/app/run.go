@@ -1,4 +1,4 @@
-// Package app assembles API dependencies and coordinates graceful lifecycle.
+// Package app 组装 API 依赖并协调优雅启停生命周期。
 package app
 
 import (
@@ -10,21 +10,21 @@ import (
 	"os"
 	"time"
 
+	contractai "exchange-lab/internal/ai"
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/config"
+	"exchange-lab/internal/health"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/identity"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/observability"
+	domainorder "exchange-lab/internal/order"
+	store "exchange-lab/internal/platform/postgres"
+	"exchange-lab/internal/platform/rediscache"
+	"exchange-lab/internal/realtime"
+	"exchange-lab/migrations"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
-	contractai "github.com/woyaofei303/exchange-lab/internal/ai"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	"github.com/woyaofei303/exchange-lab/internal/health"
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/identity"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/observability"
-	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
-	"github.com/woyaofei303/exchange-lab/internal/realtime"
-	"github.com/woyaofei303/exchange-lab/migrations"
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 	natsReconnectWait  = 500 * time.Millisecond
 )
 
-// Run assembles and serves the API until cancellation or a process-level failure.
+// Run 组装并启动 API，持续运行直至收到取消信号或发生进程级故障。
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) (runErr error) {
 	traceShutdown, err := observability.SetupTracing(ctx, "exchange-api", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 	if err != nil {

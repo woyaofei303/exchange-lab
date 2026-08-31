@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// Cache stores only rebuildable market read models. A cache error must never
-// replace the authoritative Reader result.
+// Cache 仅存储可重建的行情读取模型，缓存错误绝不能替代权威 Reader 的结果。
 type Cache interface {
 	GetInstruments(context.Context, string) ([]trading.Instrument, bool, error)
 	PutInstruments(context.Context, string, []trading.Instrument) error
@@ -17,15 +16,15 @@ type Cache interface {
 	PutTickers(context.Context, string, []Ticker) error
 }
 
-// CachedReader implements cache-aside reads over an authoritative market
-// source. Redis failures degrade to the source; source failures remain visible.
+// CachedReader 在权威行情源之上实现旁路缓存读取。
+// Redis 故障时降级到权威源；权威源故障仍会向上返回。
 type CachedReader struct {
 	source Reader
 	cache  Cache
 	logger *slog.Logger
 }
 
-// NewCachedReader validates an authoritative reader and rebuildable cache.
+// NewCachedReader 校验权威读取器和可重建缓存。
 func NewCachedReader(source Reader, cache Cache, logger *slog.Logger) (*CachedReader, error) {
 	if source == nil || cache == nil {
 		return nil, fmt.Errorf("create cached market reader: source and cache are required")
@@ -36,7 +35,7 @@ func NewCachedReader(source Reader, cache Cache, logger *slog.Logger) (*CachedRe
 	return &CachedReader{source: source, cache: cache, logger: logger}, nil
 }
 
-// Instruments serves cache hits and falls back to the source on cache failure.
+// Instruments 返回缓存命中结果，缓存失败时回退到权威源。
 func (r *CachedReader) Instruments(ctx context.Context, symbol string) ([]trading.Instrument, error) {
 	items, hit, err := r.cache.GetInstruments(ctx, symbol)
 	if err == nil && hit {
@@ -58,7 +57,7 @@ func (r *CachedReader) Instruments(ctx context.Context, symbol string) ([]tradin
 	return items, nil
 }
 
-// Tickers serves cache hits and treats cache writes as best-effort projections.
+// Tickers 返回缓存命中结果，并将缓存写入视为尽力而为的投影。
 func (r *CachedReader) Tickers(ctx context.Context, symbol string) ([]Ticker, error) {
 	items, hit, err := r.cache.GetTickers(ctx, symbol)
 	if err == nil && hit {

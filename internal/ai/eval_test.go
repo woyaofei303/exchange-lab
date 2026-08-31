@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/woyaofei303/exchange-lab/internal/risk"
+	"exchange-lab/internal/risk"
 )
 
 type evalSample struct {

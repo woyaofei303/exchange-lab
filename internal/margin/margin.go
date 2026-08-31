@@ -1,13 +1,13 @@
-// Package margin calculates isolated and cross-margin risk with integer atoms.
+// Package margin 使用整数最小单位计算逐仓和全仓风险。
 package margin
 
 import (
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
-	"github.com/woyaofei303/exchange-lab/internal/position"
+	"exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/position"
 )
 
-// Margin errors classify invalid snapshots, tier breaches and insufficient collateral.
+// 保证金错误按无效快照、档位超限和抵押品不足分类。
 var (
 	ErrInvalidRisk        = errors.New("invalid margin risk input")
 	ErrLeverage           = errors.New("leverage exceeds tier")
@@ -15,14 +15,14 @@ var (
 	ErrInsufficientMargin = errors.New("insufficient margin")
 )
 
-// Tier defines the notional cap, leverage cap and maintenance requirement.
+// Tier 定义名义价值上限、杠杆上限和维持保证金要求。
 type Tier struct {
 	NotionalCapAtoms     int64
 	MaxLeverage          int64
 	MaintenanceMarginBPS int64
 }
 
-// Input contains exact account and position values for isolated evaluation.
+// Input 包含逐仓评估所需的精确账户和仓位值。
 type Input struct {
 	WalletBalanceAtoms, PositionSizeAtoms, EntryPriceAtoms, MarkPriceAtoms int64
 	QuantityScale                                                          uint8
@@ -30,10 +30,10 @@ type Input struct {
 	OrderMarginAtoms                                                       int64
 }
 
-// IsolatedSnapshot is the complete result of one isolated-margin evaluation.
+// IsolatedSnapshot 是一次逐仓保证金评估的完整结果。
 type IsolatedSnapshot struct{ NotionalAtoms, UnrealizedPnLAtoms, InitialMarginAtoms, MaintenanceMarginAtoms, MarginBalanceAtoms, AvailableBalanceAtoms int64 }
 
-// EvaluateIsolated calculates margin requirements without mutating account state.
+// EvaluateIsolated 在不修改账户状态的情况下计算保证金要求。
 func EvaluateIsolated(in Input, tier Tier) (IsolatedSnapshot, error) {
 	if in.WalletBalanceAtoms < 0 || in.MarkPriceAtoms <= 0 || in.Leverage <= 0 || in.OrderMarginAtoms < 0 || tier.NotionalCapAtoms <= 0 || tier.MaxLeverage <= 0 || tier.MaintenanceMarginBPS <= 0 {
 		return IsolatedSnapshot{}, ErrInvalidRisk
@@ -73,7 +73,7 @@ func EvaluateIsolated(in Input, tier Tier) (IsolatedSnapshot, error) {
 	return IsolatedSnapshot{NotionalAtoms: notional, UnrealizedPnLAtoms: upnl, InitialMarginAtoms: im, MaintenanceMarginAtoms: mm, MarginBalanceAtoms: marginBalance, AvailableBalanceAtoms: available}, nil
 }
 
-// CheckOrder verifies a new reserve against available collateral and a positive version change.
+// CheckOrder 根据可用抵押品和正向版本变更校验新的资金预留。
 func CheckOrder(available, alreadyReserved, required, versionDelta int64) error {
 	if available < 0 || alreadyReserved < 0 || required < 0 || versionDelta <= 0 {
 		return ErrInvalidRisk
@@ -84,16 +84,16 @@ func CheckOrder(available, alreadyReserved, required, versionDelta int64) error 
 	return nil
 }
 
-// PositionRisk is one position's contribution to a cross-margin snapshot.
+// PositionRisk 表示一个仓位对全仓保证金快照的贡献。
 type PositionRisk struct{ UnrealizedPnLAtoms, MaintenanceMarginAtoms int64 }
 
-// CrossSnapshot aggregates shared collateral and all position requirements.
+// CrossSnapshot 汇总共享抵押品和所有仓位要求。
 type CrossSnapshot struct {
 	MarginBalanceAtoms, MaintenanceMarginAtoms, OrderMarginAtoms, AvailableBalanceAtoms int64
 	Version                                                                             int64
 }
 
-// EvaluateCross builds a versioned shared-collateral risk snapshot.
+// EvaluateCross 构建带版本的共享抵押品风险快照。
 func EvaluateCross(wallet, orderMargin, version int64, positions []PositionRisk) (CrossSnapshot, error) {
 	if wallet < 0 || orderMargin < 0 || version <= 0 {
 		return CrossSnapshot{}, ErrInvalidRisk
@@ -110,5 +110,5 @@ func EvaluateCross(wallet, orderMargin, version int64, positions []PositionRisk)
 	return result, nil
 }
 
-// SameVersion reports whether a snapshot is still valid for an expected risk version.
+// SameVersion 表示快照对预期风险版本是否仍然有效。
 func SameVersion(snapshot CrossSnapshot, expected int64) bool { return snapshot.Version == expected }

@@ -1,4 +1,4 @@
-// Package config validates environment configuration for every executable.
+// Package config 校验各可执行程序的环境配置。
 package config
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Config contains validated API and shared infrastructure settings.
+// Config 包含校验后的 API 和共享基础设施设置。
 type Config struct {
 	HTTPAddr           string
 	PostgresDSN        string
@@ -34,8 +34,7 @@ type Config struct {
 	LoginRateWindow    time.Duration
 }
 
-// DatabaseConfig is the configuration surface required by one-shot database
-// jobs such as migrations, backup checks and reconciliation.
+// DatabaseConfig 是迁移、备份检查和对账等一次性数据库任务所需的配置。
 type DatabaseConfig struct {
 	PostgresDSN string
 	MinConns    int32
@@ -43,7 +42,7 @@ type DatabaseConfig struct {
 	Timeout     time.Duration
 }
 
-// MarketWorkerConfig bounds feed reconnects, heartbeats and downstream writes.
+// MarketWorkerConfig 限制行情源重连、心跳和下游写入行为。
 type MarketWorkerConfig struct {
 	WebSocketURL       string
 	MaxMessageBytes    int64
@@ -59,14 +58,14 @@ type MarketWorkerConfig struct {
 	NATSURL            string
 }
 
-// MarketSimulatorConfig defines the local deterministic feed endpoint and cadence.
+// MarketSimulatorConfig 定义本地确定性行情源的端点和发送节奏。
 type MarketSimulatorConfig struct {
 	HTTPAddr        string
 	Interval        time.Duration
 	ShutdownTimeout time.Duration
 }
 
-// CandleWorkerConfig contains candle scales, persistence and publication settings.
+// CandleWorkerConfig 包含 K 线精度、持久化和发布设置。
 type CandleWorkerConfig struct {
 	HTTPAddr         string
 	Database         DatabaseConfig
@@ -77,12 +76,12 @@ type CandleWorkerConfig struct {
 	ShutdownTimeout  time.Duration
 }
 
-// LoadOS validates API configuration from the current process environment.
+// LoadOS 从当前进程环境中读取并校验 API 配置。
 func LoadOS() (Config, error) {
 	return Load(os.LookupEnv)
 }
 
-// LoadMarketWorker validates market worker settings from a lookup function.
+// LoadMarketWorker 从查询函数中读取并校验行情工作进程设置。
 func LoadMarketWorker(lookup func(string) (string, bool)) (MarketWorkerConfig, error) {
 	read := requiredReader(lookup)
 	webSocketURL, err := read("MARKET_WS_URL")
@@ -156,7 +155,7 @@ func LoadMarketWorker(lookup func(string) (string, bool)) (MarketWorkerConfig, e
 	}, nil
 }
 
-// LoadMarketSimulator validates simulator settings from a lookup function.
+// LoadMarketSimulator 从查询函数中读取并校验模拟器设置。
 func LoadMarketSimulator(lookup func(string) (string, bool)) (MarketSimulatorConfig, error) {
 	read := requiredReader(lookup)
 	httpAddr, err := read("SIMULATOR_HTTP_ADDR")
@@ -177,7 +176,7 @@ func LoadMarketSimulator(lookup func(string) (string, bool)) (MarketSimulatorCon
 	return MarketSimulatorConfig{HTTPAddr: httpAddr, Interval: interval, ShutdownTimeout: shutdownTimeout}, nil
 }
 
-// LoadCandleWorker validates candle worker settings from a lookup function.
+// LoadCandleWorker 从查询函数中读取并校验 K 线工作进程设置。
 func LoadCandleWorker(lookup func(string) (string, bool)) (CandleWorkerConfig, error) {
 	read := requiredReader(lookup)
 	httpAddr, err := read("CANDLE_HTTP_ADDR")
@@ -222,7 +221,7 @@ func LoadCandleWorker(lookup func(string) (string, bool)) (CandleWorkerConfig, e
 	}, nil
 }
 
-// Load validates API configuration from an injected environment lookup.
+// Load 从注入的环境查询函数中读取并校验 API 配置。
 func Load(lookup func(string) (string, bool)) (Config, error) {
 	read := func(key string) (string, error) {
 		value, ok := lookup(key)
@@ -354,7 +353,7 @@ func readBoundedUint(read func(string) (string, error), key string, minimum, max
 	return parsed, nil
 }
 
-// LoadDatabase validates the database-only environment used by one-shot jobs.
+// LoadDatabase 校验一次性任务使用的数据库专用环境配置。
 func LoadDatabase(lookup func(string) (string, bool)) (DatabaseConfig, error) {
 	read := func(key string) (string, error) {
 		value, ok := lookup(key)

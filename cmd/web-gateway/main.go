@@ -1,4 +1,4 @@
-// Command web-gateway serves the React terminal and proxies API traffic.
+// Command web-gateway 提供 React 终端并代理 API 流量。
 package main
 
 import (

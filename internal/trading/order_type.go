@@ -5,16 +5,16 @@ import (
 	"strings"
 )
 
-// OrderType identifies how an order is priced.
+// OrderType 标识订单的定价方式。
 type OrderType string
 
-// Supported public order-type tokens; the v1 matching path accepts limit only.
+// 支持的公开订单类型；v1 撮合流程仅接受限价单。
 const (
 	OrderTypeLimit  OrderType = "limit"
 	OrderTypeMarket OrderType = "market"
 )
 
-// ParseOrderType parses limit or market case-insensitively.
+// ParseOrderType 以不区分大小写的方式解析限价单或市价单。
 func ParseOrderType(text string) (OrderType, error) {
 	orderType := OrderType(strings.ToLower(text))
 	switch orderType {
@@ -25,7 +25,7 @@ func ParseOrderType(text string) (OrderType, error) {
 	}
 }
 
-// String returns the canonical lowercase order type.
+// String 返回规范的小写订单类型。
 func (o OrderType) String() string {
 	return string(o)
 }

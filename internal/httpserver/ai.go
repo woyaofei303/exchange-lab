@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	contractai "github.com/woyaofei303/exchange-lab/internal/ai"
+	contractai "exchange-lab/internal/ai"
 )
 
-// AISummarizer exposes read-only, evidence-bound risk explanations.
+// AISummarizer 提供只读且受证据约束的风险解释。
 type AISummarizer interface {
 	Summarize(context.Context, int64, string) (contractai.Summary, contractai.Usage, error)
 }

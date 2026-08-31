@@ -17,14 +17,14 @@ local ttl = redis.call('PTTL', KEYS[1])
 return {count, ttl}
 `)
 
-// RateDecision reports allowance, remaining attempts and retry delay.
+// RateDecision 报告是否允许、剩余尝试次数和重试延迟。
 type RateDecision struct {
 	Allowed    bool
 	Remaining  uint64
 	RetryAfter time.Duration
 }
 
-// LoginRateLimiter uses one atomic Redis script per normalized identity.
+// LoginRateLimiter 为每个规范化身份使用一个原子 Redis 脚本。
 type LoginRateLimiter struct {
 	client  redisclient.Cmdable
 	timeout time.Duration
@@ -32,7 +32,7 @@ type LoginRateLimiter struct {
 	window  time.Duration
 }
 
-// NewLoginRateLimiter validates fail-closed operation and window bounds.
+// NewLoginRateLimiter 校验失败关闭行为和时间窗口边界。
 func NewLoginRateLimiter(client redisclient.Cmdable, timeout time.Duration, limit uint64, window time.Duration) (*LoginRateLimiter, error) {
 	if client == nil || timeout <= 0 || limit == 0 || window <= 0 {
 		return nil, fmt.Errorf("create login rate limiter: invalid configuration")
@@ -40,8 +40,8 @@ func NewLoginRateLimiter(client redisclient.Cmdable, timeout time.Duration, limi
 	return &LoginRateLimiter{client: client, timeout: timeout, limit: limit, window: window}, nil
 }
 
-// Allow atomically counts a normalized identity. Redis errors are returned so
-// the future authentication layer can fail closed instead of bypassing limits.
+// Allow 原子统计一个规范化身份。Redis 错误会向上返回，
+// 使后续身份验证层失败关闭，而不是绕过限制。
 func (l *LoginRateLimiter) Allow(ctx context.Context, identity string) (RateDecision, error) {
 	key, err := privateKey("security:login", identity)
 	if err != nil {

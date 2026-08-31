@@ -1,5 +1,5 @@
 -- +goose Up
--- Establishes exact double-entry accounts, balances and idempotent simulated funding.
+-- 建立精确的复式记账账户、余额和幂等模拟入金。
 CREATE TABLE ledger_accounts (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     owner_user_id BIGINT REFERENCES users(id) ON DELETE RESTRICT,

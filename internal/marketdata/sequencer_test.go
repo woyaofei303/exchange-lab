@@ -3,7 +3,7 @@ package marketdata_test
 import (
 	"testing"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
+	"exchange-lab/internal/marketdata"
 )
 
 func TestSequencerClassifiesContinuousDuplicateOutOfOrderAndGap(t *testing.T) {

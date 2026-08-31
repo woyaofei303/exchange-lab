@@ -1,4 +1,4 @@
-// Package observability provides bounded metrics and tracing integration.
+// Package observability 提供有界指标和链路追踪集成。
 package observability
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// Metrics owns the process-local Prometheus registry and bounded label sets.
+// Metrics 管理进程本地的 Prometheus 注册表和有界标签集。
 type Metrics struct {
 	registry               *prometheus.Registry
 	HTTPDuration           *prometheus.HistogramVec
@@ -23,7 +23,7 @@ type Metrics struct {
 	ReconciliationFailures prometheus.Counter
 }
 
-// New creates an isolated registry for one service process.
+// New 为一个服务进程创建独立注册表。
 func New(service string) *Metrics {
 	registry := prometheus.NewRegistry()
 	m := &Metrics{registry: registry,
@@ -40,12 +40,12 @@ func New(service string) *Metrics {
 	return m
 }
 
-// Handler exposes this registry in Prometheus text format.
+// Handler 以 Prometheus 文本格式公开该注册表。
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{})
 }
 
-// Wrap records request latency and status using bounded route labels.
+// Wrap 使用有界路由标签记录请求延迟和状态。
 func (m *Metrics) Wrap(service string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
@@ -64,7 +64,7 @@ type metricWriter struct {
 	status int
 }
 
-// WriteHeader records the first response status before forwarding it.
+// WriteHeader 在转发前记录第一个响应状态。
 func (w *metricWriter) WriteHeader(code int) {
 	if w.status == 0 {
 		w.status = code
@@ -72,7 +72,7 @@ func (w *metricWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// Write records an implicit 200 response before forwarding bytes.
+// Write 在转发字节前记录隐式的 200 响应。
 func (w *metricWriter) Write(p []byte) (int, error) {
 	if w.status == 0 {
 		w.status = 200
@@ -86,5 +86,5 @@ func (w *metricWriter) code() int {
 	return w.status
 }
 
-// Unwrap exposes the underlying writer to optional HTTP interfaces.
+// Unwrap 向可选 HTTP 接口公开底层写入器。
 func (w *metricWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }

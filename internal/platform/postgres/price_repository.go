@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/contractprice"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
 )
 
-// PriceRepository persists source evidence, index prices and mark prices together.
+// PriceRepository 一并持久化来源证据、指数价格和标记价格。
 type PriceRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewPriceRepository constructs a context-bounded price repository.
+// NewPriceRepository 创建受上下文限制的价格仓储。
 func NewPriceRepository(pool *pgxpool.Pool, timeout time.Duration) *PriceRepository {
 	return &PriceRepository{pool: pool, timeout: timeout}
 }
 
-// Save commits source status, index evidence and mark price in one transaction.
+// Save 在一个事务中提交来源状态、指数证据和标记价格。
 func (r *PriceRepository) Save(ctx context.Context, symbol string, scale uint8, sources []contractprice.Source, index contractprice.IndexResult, markAtoms, premiumBPS int64) (resultErr error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || symbol == "" || scale > 18 || len(sources) == 0 || index.PriceAtoms <= 0 || markAtoms <= 0 || index.AsOf.IsZero() {
 		return fmt.Errorf("save contract price: invalid input")
@@ -70,7 +70,7 @@ func (r *PriceRepository) Save(ctx context.Context, symbol string, scale uint8, 
 	return nil
 }
 
-// Latest returns the newest mark with matching index-source evidence.
+// Latest 返回最新标记价格及匹配的指数来源证据。
 func (r *PriceRepository) Latest(ctx context.Context, symbol string) (contractprice.Snapshot, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || symbol == "" {
 		return contractprice.Snapshot{}, fmt.Errorf("latest contract price: invalid input")

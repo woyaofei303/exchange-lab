@@ -1,4 +1,4 @@
-/** Bounded HTTP contract load scenario; results are local regression evidence only. */
+/** 有界的 HTTP 契约负载场景；结果仅作为本地回归证据。 */
 import http from 'k6/http';
 import ws from 'k6/ws';
 import { check, sleep } from 'k6';

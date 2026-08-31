@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/ledger"
+	domainorder "exchange-lab/internal/order"
+	"exchange-lab/internal/trading"
 )
 
 type placeOrderRequest struct {

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
+	"exchange-lab/internal/marketdata"
 )
 
 func TestSimulatorGeneratesSnapshotTickerTradeAndDelta(t *testing.T) {

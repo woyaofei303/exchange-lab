@@ -1,20 +1,20 @@
-// Package readtools is the only business surface exposed to AI/MCP. It is
-// deliberately read-only and pins every user-scoped query to one principal.
+// Package readtools 是唯一向 AI/MCP 暴露的业务接口。
+// 它刻意保持只读，并将每个用户范围查询绑定到一个主体。
 package readtools
 
 import (
 	"context"
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
+	"exchange-lab/internal/contractprice"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/risk"
 	"time"
 )
 
-// ErrInvalidScope reports an invalid principal, symbol, limit or dependency.
+// ErrInvalidScope 表示主体、交易对、限制或依赖项无效。
 var ErrInvalidScope = errors.New("invalid read tool scope")
 
-// Source is the read-only repository surface available to AI and MCP tools.
+// Source 是 AI 和 MCP 工具可用的只读仓储接口。
 type Source interface {
 	Positions(context.Context, int64) ([]position.View, error)
 	Risk(context.Context, int64, string) (risk.Snapshot, error)
@@ -23,7 +23,7 @@ type Source interface {
 	Liquidations(context.Context, int64) ([]risk.LiquidationRecord, error)
 }
 
-// AuditRecord captures one tool request, its evidence and success outcome.
+// AuditRecord 记录一次工具请求、其证据和成功结果。
 type AuditRecord struct {
 	UserID      int64
 	Tool        string
@@ -33,12 +33,12 @@ type AuditRecord struct {
 	OccurredAt  time.Time
 }
 
-// Audit persists tool-call evidence independently from response generation.
+// Audit 独立于响应生成过程持久化工具调用证据。
 type Audit interface {
 	RecordTool(context.Context, AuditRecord) error
 }
 
-// Service pins all user-scoped tool calls to one authenticated principal.
+// Service 将所有用户范围工具调用绑定到一个已认证主体。
 type Service struct {
 	userID int64
 	source Source
@@ -46,7 +46,7 @@ type Service struct {
 	now    func() time.Time
 }
 
-// New validates a principal and constructs its read-only tool service.
+// New 校验主体并创建其只读工具服务。
 func New(userID int64, source Source, audit Audit, now func() time.Time) (*Service, error) {
 	if userID <= 0 || source == nil || audit == nil || now == nil {
 		return nil, ErrInvalidScope
@@ -54,7 +54,7 @@ func New(userID int64, source Source, audit Audit, now func() time.Time) (*Servi
 	return &Service{userID: userID, source: source, audit: audit, now: now}, nil
 }
 
-// GetPosition returns the principal's position for the only supported symbol.
+// GetPosition 返回主体在唯一受支持交易对上的仓位。
 func (s *Service) GetPosition(ctx context.Context, symbol string) (position.View, error) {
 	if !validSymbol(symbol) {
 		return position.View{}, ErrInvalidScope
@@ -72,7 +72,7 @@ func (s *Service) GetPosition(ctx context.Context, symbol string) (position.View
 	return position.View{}, errors.Join(ErrInvalidScope, recordErr)
 }
 
-// GetMarginStatus returns the server-computed risk snapshot and records evidence.
+// GetMarginStatus 返回服务端计算的风险快照并记录证据。
 func (s *Service) GetMarginStatus(ctx context.Context, symbol string) (risk.Snapshot, error) {
 	if !validSymbol(symbol) {
 		return risk.Snapshot{}, ErrInvalidScope
@@ -85,7 +85,7 @@ func (s *Service) GetMarginStatus(ctx context.Context, symbol string) (risk.Snap
 	return value, errors.Join(err, s.record(ctx, "get_margin_status", symbol, ids, err == nil))
 }
 
-// GetMarkPrice returns the source-audited mark-price snapshot.
+// GetMarkPrice 返回经过来源审计的标记价格快照。
 func (s *Service) GetMarkPrice(ctx context.Context, symbol string) (contractprice.Snapshot, error) {
 	if !validSymbol(symbol) {
 		return contractprice.Snapshot{}, ErrInvalidScope
@@ -98,7 +98,7 @@ func (s *Service) GetMarkPrice(ctx context.Context, symbol string) (contractpric
 	return value, errors.Join(err, s.record(ctx, "get_mark_price", symbol, ids, err == nil))
 }
 
-// GetFunding returns a bounded slice of recent funding facts.
+// GetFunding 返回有界的近期资金费事实切片。
 func (s *Service) GetFunding(ctx context.Context, symbol string, limit int) ([]risk.FundingRecord, error) {
 	if !validSymbol(symbol) || limit < 1 || limit > 50 {
 		return nil, ErrInvalidScope
@@ -110,7 +110,7 @@ func (s *Service) GetFunding(ctx context.Context, symbol string, limit int) ([]r
 	return items, errors.Join(err, s.record(ctx, "get_funding", symbol, []string{"funding:" + symbol}, err == nil))
 }
 
-// GetLiquidationHistory returns only the principal's bounded liquidation history.
+// GetLiquidationHistory 仅返回该主体的有界清算历史。
 func (s *Service) GetLiquidationHistory(ctx context.Context, limit int) ([]risk.LiquidationRecord, error) {
 	if limit < 1 || limit > 50 {
 		return nil, ErrInvalidScope

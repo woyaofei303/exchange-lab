@@ -9,18 +9,18 @@ import (
 	"testing"
 	"time"
 
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/eventing"
+	"exchange-lab/internal/identity"
+	"exchange-lab/internal/ledger"
+	domainorder "exchange-lab/internal/order"
+	store "exchange-lab/internal/platform/postgres"
+	"exchange-lab/internal/trading"
+	"exchange-lab/migrations"
 	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	"github.com/woyaofei303/exchange-lab/internal/identity"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
-	"github.com/woyaofei303/exchange-lab/migrations"
 )
 
 func TestPostgresMigrationsRepositoriesAndRollback(t *testing.T) {

@@ -1,4 +1,4 @@
-// Command domaincheck rejects floating-point truth in financial domain code.
+// Command domaincheck 拒绝金融领域代码使用浮点数作为事实来源。
 package main
 
 import (

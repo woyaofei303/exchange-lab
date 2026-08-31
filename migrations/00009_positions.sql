@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds one-way positions, fill facts and idempotent trade settlement records.
+-- 添加单向持仓、成交事实和幂等成交结算记录。
 CREATE TABLE positions (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     symbol TEXT NOT NULL REFERENCES contracts(symbol) ON DELETE RESTRICT,

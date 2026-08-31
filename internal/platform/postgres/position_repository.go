@@ -10,25 +10,25 @@ import (
 	"math/big"
 	"time"
 
+	"exchange-lab/internal/eventing"
+	"exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/trading"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
-// PositionConsumer is the stable processed-event identity for trade settlement.
+// PositionConsumer 是成交结算已处理事件的稳定标识。
 const PositionConsumer = "position-v1"
 const takerFeeBPS int64 = 4
 
-// PositionRepository atomically settles trades into positions, margin and ledger facts.
+// PositionRepository 将成交原子结算到仓位、保证金和账本事实中。
 type PositionRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewPositionRepository constructs a context-bounded position repository.
+// NewPositionRepository 创建受上下文限制的仓位仓储。
 func NewPositionRepository(pool *pgxpool.Pool, timeout time.Duration) *PositionRepository {
 	return &PositionRepository{pool: pool, timeout: timeout}
 }
@@ -63,7 +63,7 @@ func decodeExecutedTrade(envelope eventing.Envelope) (executedTrade, error) {
 	return trade, nil
 }
 
-// Process settles both trade legs exactly once in one Serializable transaction.
+// Process 在一个 Serializable 事务中对成交双方精确结算一次。
 func (r *PositionRepository) Process(ctx context.Context, envelope eventing.Envelope, receivedAt time.Time) (bool, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return false, fmt.Errorf("settle position: invalid repository")
@@ -264,7 +264,7 @@ func settleLedgerAndMargin(ctx context.Context, tx pgx.Tx, userID int64, symbol,
 	return nil
 }
 
-// List returns user positions valued against the latest persisted mark price.
+// List 返回按最新持久化标记价格估值的用户仓位。
 func (r *PositionRepository) List(ctx context.Context, userID int64) ([]position.View, error) {
 	if userID <= 0 {
 		return nil, fmt.Errorf("list positions: invalid user")

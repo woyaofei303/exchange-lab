@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/identity"
+	"exchange-lab/internal/identity"
 )
 
 const sessionCookieName = "exchange_session"

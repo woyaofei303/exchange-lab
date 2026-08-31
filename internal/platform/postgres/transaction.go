@@ -10,19 +10,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Transactor owns transaction deadlines and commit/rollback behavior.
+// Transactor 管理事务截止时间和提交/回滚行为。
 type Transactor struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewTransactor constructs a transaction boundary with a fixed deadline.
+// NewTransactor 创建带固定截止时间的事务边界。
 func NewTransactor(pool *pgxpool.Pool, timeout time.Duration) *Transactor {
 	return &Transactor{pool: pool, timeout: timeout}
 }
 
-// WithinTx runs fn inside one transaction. A callback error is returned and
-// the transaction is rolled back; a nil callback result is committed.
+// WithinTx 在一个事务中运行 fn。回调返回错误时向上返回并回滚事务；
+// 回调返回 nil 时提交事务。
 func (t *Transactor) WithinTx(ctx context.Context, options pgx.TxOptions, fn func(context.Context, pgx.Tx) error) error {
 	if t == nil || t.pool == nil || t.timeout <= 0 || fn == nil {
 		return fmt.Errorf("run postgres transaction: invalid configuration")
@@ -46,9 +46,8 @@ func (t *Transactor) WithinTx(ctx context.Context, options pgx.TxOptions, fn fun
 	return nil
 }
 
-// retrySerialization retries an idempotent operation after PostgreSQL aborts a
-// Serializable transaction with SQLSTATE 40001. Callers must keep the retry
-// count bounded and ensure that each attempt creates a fresh transaction.
+// retrySerialization 在 PostgreSQL 以 SQLSTATE 40001 中止 Serializable 事务后，
+// 重试幂等操作。调用方必须限制重试次数，并确保每次尝试创建新事务。
 func retrySerialization[T any](ctx context.Context, attempts int, operation func() (T, error)) (T, error) {
 	var zero T
 	if attempts < 1 || operation == nil {

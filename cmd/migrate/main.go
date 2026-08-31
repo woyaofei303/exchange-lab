@@ -1,4 +1,4 @@
-// Command migrate applies, rolls back or reports embedded schema migrations.
+// Command migrate 应用、回滚或报告内嵌的数据库结构迁移。
 package main
 
 import (
@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
+	"exchange-lab/internal/config"
+	store "exchange-lab/internal/platform/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
 )
 
 type migrationDirection string

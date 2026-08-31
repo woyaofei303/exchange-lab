@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/config"
+	"exchange-lab/internal/config"
 )
 
 func validValues() map[string]string {

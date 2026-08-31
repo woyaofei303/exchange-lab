@@ -5,16 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"exchange-lab/internal/risk"
 	"fmt"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
 	"io"
 	"time"
 )
 
-// ErrInvalidOutput reports model output that violates schema or evidence constraints.
+// ErrInvalidOutput 表示模型输出违反结构或证据约束。
 var ErrInvalidOutput = errors.New("invalid AI structured output")
 
-// Summary is the only structured explanation accepted from an AI model.
+// Summary 是系统接受的唯一 AI 模型结构化解释格式。
 type Summary struct {
 	Trend                  string   `json:"trend"`
 	Position               string   `json:"position"`
@@ -26,25 +26,25 @@ type Summary struct {
 	Disclaimer             string   `json:"disclaimer"`
 }
 
-// Usage records model token counts for audit and cost evidence.
+// Usage 记录模型令牌数量，作为审计和成本证据。
 type Usage struct {
 	InputTokens  int64 `json:"input_tokens"`
 	OutputTokens int64 `json:"output_tokens"`
 }
 
-// Model generates one structured explanation from a prompt and JSON schema.
+// Model 根据提示词和 JSON Schema 生成一条结构化解释。
 type Model interface {
 	Generate(context.Context, string, map[string]any) ([]byte, Usage, error)
 }
 
-// Source exposes the server-computed facts an explanation may cite.
+// Source 提供解释可以引用的服务端计算事实。
 type Source interface {
 	Snapshot(context.Context, int64, string) (risk.Snapshot, error)
 	FundingHistory(context.Context, string) ([]risk.FundingRecord, error)
 	Liquidations(context.Context, int64) ([]risk.LiquidationRecord, error)
 }
 
-// RunRecord is the auditable metadata for one explanation attempt.
+// RunRecord 是一次解释尝试的可审计元数据。
 type RunRecord struct {
 	UserID                       int64
 	Symbol, PromptVersion, Model string
@@ -55,12 +55,12 @@ type RunRecord struct {
 	CreatedAt                    time.Time
 }
 
-// AuditStore persists AI run metadata without making it trading truth.
+// AuditStore 持久化 AI 运行元数据，但不将其作为交易事实。
 type AuditStore interface {
 	Record(context.Context, RunRecord) error
 }
 
-// Service binds model output to authenticated, server-computed evidence.
+// Service 将模型输出绑定到经过身份验证的服务端计算证据。
 type Service struct {
 	source                   Source
 	model                    Model
@@ -76,7 +76,7 @@ type modelInput struct {
 	AllowedEvidenceIDs []string                 `json:"allowed_evidence_ids"`
 }
 
-// NewService validates all evidence, model and audit dependencies.
+// NewService 校验所有证据、模型和审计依赖项。
 func NewService(source Source, model Model, audit AuditStore, modelName, promptVersion string, now func() time.Time) (*Service, error) {
 	if source == nil || model == nil || audit == nil || modelName == "" || promptVersion == "" || now == nil {
 		return nil, fmt.Errorf("create AI service: invalid configuration")
@@ -84,7 +84,7 @@ func NewService(source Source, model Model, audit AuditStore, modelName, promptV
 	return &Service{source: source, model: model, audit: audit, modelName: modelName, promptVersion: promptVersion, now: now}, nil
 }
 
-// Summarize generates and audits a risk explanation, rejecting invented evidence or numbers.
+// Summarize 生成并审计风险解释，拒绝虚构的证据或数字。
 func (s *Service) Summarize(ctx context.Context, userID int64, symbol string) (Summary, Usage, error) {
 	started := s.now()
 	snapshot, err := s.source.Snapshot(ctx, userID, symbol)
@@ -152,7 +152,7 @@ func decodeSummary(payload []byte) (Summary, error) {
 	return summary, nil
 }
 
-// SummarySchema returns the strict JSON schema shared with structured-output models.
+// SummarySchema 返回与结构化输出模型共享的严格 JSON Schema。
 func SummarySchema() map[string]any {
 	return map[string]any{"type": "object", "additionalProperties": false, "required": []string{"trend", "position", "margin_ratio_bps", "liquidation_distance_bps", "funding_rate_bps", "risks", "evidence_ids", "disclaimer"}, "properties": map[string]any{"trend": map[string]any{"type": "string"}, "position": map[string]any{"type": "string"}, "margin_ratio_bps": map[string]any{"type": "integer"}, "liquidation_distance_bps": map[string]any{"type": "integer"}, "funding_rate_bps": map[string]any{"type": "integer"}, "risks": map[string]any{"type": "array", "items": map[string]any{"type": "string"}}, "evidence_ids": map[string]any{"type": "array", "items": map[string]any{"type": "string"}}, "disclaimer": map[string]any{"type": "string"}}}
 }

@@ -5,17 +5,16 @@ import (
 	"database/sql"
 	"fmt"
 
+	"exchange-lab/migrations"
 	"github.com/pressly/goose/v3"
-	"github.com/woyaofei303/exchange-lab/migrations"
 )
 
-// Migrator applies embedded, versioned PostgreSQL schema changes.
+// Migrator 应用内嵌且带版本的 PostgreSQL 数据库结构变更。
 type Migrator struct {
 	provider *goose.Provider
 }
 
-// NewMigrator configures goose to store migration history in
-// schema_migrations. The caller retains ownership of db.
+// NewMigrator 配置 goose 将迁移历史存入 schema_migrations；db 仍由调用方管理。
 func NewMigrator(db *sql.DB) (*Migrator, error) {
 	if db == nil {
 		return nil, fmt.Errorf("create migrator: database is required")
@@ -32,8 +31,7 @@ func NewMigrator(db *sql.DB) (*Migrator, error) {
 	return &Migrator{provider: provider}, nil
 }
 
-// Up applies every pending migration. Calling Up when the schema is current is
-// a no-op.
+// Up 应用所有待处理迁移；数据库结构已是最新时不执行任何操作。
 func (m *Migrator) Up(ctx context.Context) error {
 	if _, err := m.provider.Up(ctx); err != nil {
 		return fmt.Errorf("migrate database up: %w", err)
@@ -41,7 +39,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 	return nil
 }
 
-// Down rolls back exactly one migration.
+// Down 精确回滚一个迁移。
 func (m *Migrator) Down(ctx context.Context) error {
 	if _, err := m.provider.Down(ctx); err != nil {
 		return fmt.Errorf("migrate database down: %w", err)
@@ -49,7 +47,7 @@ func (m *Migrator) Down(ctx context.Context) error {
 	return nil
 }
 
-// Version returns the latest applied migration version.
+// Version 返回最近应用的迁移版本。
 func (m *Migrator) Version(ctx context.Context) (int64, error) {
 	version, err := m.provider.GetDBVersion(ctx)
 	if err != nil {

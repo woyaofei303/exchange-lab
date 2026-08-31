@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds RBAC and hash-only opaque session persistence.
+-- 添加 RBAC 和仅存储哈希的不透明会话持久化。
 ALTER TABLE users
     ADD COLUMN role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin'));
 

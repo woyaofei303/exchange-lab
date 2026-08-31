@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/candle"
+	"exchange-lab/internal/candle"
 )
 
 func TestApplyTradeUsesEventTimeForOHLCAndSupportsLateCorrection(t *testing.T) {

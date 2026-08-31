@@ -1,12 +1,12 @@
-// Command funding-worker periodically settles contract funding payments.
+// Command funding-worker 定期结算合约资金费。
 package main
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/observability"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
+	"exchange-lab/internal/observability"
+	store "exchange-lab/internal/platform/postgres"
 	"log/slog"
 	"net/http"
 	"os"

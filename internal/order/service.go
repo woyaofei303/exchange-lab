@@ -10,28 +10,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// InstrumentReader resolves the authoritative filters for a contract.
+// InstrumentReader 获取合约的权威过滤规则。
 type InstrumentReader interface {
 	Instruments(context.Context, string) ([]trading.Instrument, error)
 }
 
-// Store commits orders, reserves, ledger entries and Outbox facts atomically.
+// Store 原子提交订单、预留资金、账本条目和 Outbox 事实。
 type Store interface {
 	Place(context.Context, Order, string, [32]byte) (Result, error)
 	Cancel(context.Context, int64, string, string, [32]byte) (Result, error)
 	List(context.Context, int64, int) ([]Order, error)
 }
 
-// Result identifies whether an idempotent command replayed a prior result.
+// Result 标识幂等命令是否重放了先前结果。
 type Result struct {
 	Order    Order
 	Replayed bool
 }
 
-// PlaceCommand is the untrusted transport input for a limit order.
+// PlaceCommand 是来自传输层的不可信限价单输入。
 type PlaceCommand struct {
 	Symbol         string
 	Side           string
@@ -42,14 +42,14 @@ type PlaceCommand struct {
 	IdempotencyKey string
 }
 
-// Service validates commands before crossing the atomic Store boundary.
+// Service 在跨越原子 Store 边界前校验命令。
 type Service struct {
 	instruments InstrumentReader
 	store       Store
 	now         func() time.Time
 }
 
-// NewService validates order service dependencies.
+// NewService 校验订单服务依赖项。
 func NewService(instruments InstrumentReader, store Store, now func() time.Time) (*Service, error) {
 	if instruments == nil || store == nil || now == nil {
 		return nil, ErrInvalid
@@ -57,7 +57,7 @@ func NewService(instruments InstrumentReader, store Store, now func() time.Time)
 	return &Service{instruments: instruments, store: store, now: now}, nil
 }
 
-// Place canonicalizes exact values and submits one idempotent atomic command.
+// Place 规范化精确数值并提交一个幂等原子命令。
 func (s *Service) Place(ctx context.Context, userID int64, command PlaceCommand) (Result, error) {
 	if userID <= 0 || !validKey(command.IdempotencyKey) {
 		return Result{}, ErrInvalid
@@ -98,7 +98,7 @@ func (s *Service) Place(ctx context.Context, userID int64, command PlaceCommand)
 	return s.store.Place(ctx, created, command.IdempotencyKey, hashPlace(command, side))
 }
 
-// Cancel scopes cancellation to a user and stable idempotency hash.
+// Cancel 将撤单限定到用户和稳定的幂等哈希范围。
 func (s *Service) Cancel(ctx context.Context, userID int64, orderID, idempotencyKey string) (Result, error) {
 	if userID <= 0 || orderID == "" || !validKey(idempotencyKey) {
 		return Result{}, ErrInvalid
@@ -107,7 +107,7 @@ func (s *Service) Cancel(ctx context.Context, userID int64, orderID, idempotency
 	return s.store.Cancel(ctx, userID, orderID, idempotencyKey, hash)
 }
 
-// List returns a bounded user-scoped order history.
+// List 返回有界且限定到用户范围的订单历史。
 func (s *Service) List(ctx context.Context, userID int64, limit int) ([]Order, error) {
 	if userID <= 0 || limit < 1 || limit > 200 {
 		return nil, ErrInvalid

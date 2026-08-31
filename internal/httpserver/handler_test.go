@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/health"
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/health"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/trading"
 )
 
 type readiness struct {

@@ -1,4 +1,4 @@
-// Command api starts the public HTTP API and owns its process lifecycle.
+// Command api 启动公开 HTTP API 并管理其进程生命周期。
 package main
 
 import (
@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/woyaofei303/exchange-lab/internal/app"
-	"github.com/woyaofei303/exchange-lab/internal/config"
+	"exchange-lab/internal/app"
+	"exchange-lab/internal/config"
 )
 
 func main() {

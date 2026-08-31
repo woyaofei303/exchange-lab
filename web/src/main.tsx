@@ -1,4 +1,4 @@
-/** Browser entry point and shared query-cache configuration. */
+/** 浏览器入口和共享查询缓存配置。 */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

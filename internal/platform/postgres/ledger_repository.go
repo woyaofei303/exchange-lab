@@ -9,26 +9,26 @@ import (
 	"math"
 	"time"
 
+	"exchange-lab/internal/ledger"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
 )
 
 const maximumFaucetAtoms int64 = 10_000 * 100_000_000
 
-// LedgerRepository commits exact balances and double-entry facts atomically.
+// LedgerRepository 原子提交精确余额和复式记账事实。
 type LedgerRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 	now     func() time.Time
 }
 
-// NewLedgerRepository constructs a context-bounded ledger repository.
+// NewLedgerRepository 创建受上下文限制的账本仓储。
 func NewLedgerRepository(pool *pgxpool.Pool, timeout time.Duration) *LedgerRepository {
 	return &LedgerRepository{pool: pool, timeout: timeout, now: time.Now}
 }
 
-// Faucet credits simulated funds once per idempotency key in a Serializable transaction.
+// Faucet 在 Serializable 事务中按每个幂等键仅入账一次模拟资金。
 func (r *LedgerRepository) Faucet(ctx context.Context, userID, amountAtoms int64, idempotencyKey string) (ledger.FaucetResult, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || userID <= 0 || amountAtoms <= 0 || amountAtoms > maximumFaucetAtoms || len(idempotencyKey) < 8 || len(idempotencyKey) > 128 {
 		return ledger.FaucetResult{}, ledger.ErrInvalid
@@ -119,7 +119,7 @@ func (r *LedgerRepository) Faucet(ctx context.Context, userID, amountAtoms int64
 	return ledger.FaucetResult{TransactionID: domainTransaction.ID, Balance: updated}, nil
 }
 
-// Balance returns the user's materialized USDT balance or zero when absent.
+// Balance 返回用户的物化 USDT 余额；不存在时返回零。
 func (r *LedgerRepository) Balance(ctx context.Context, userID int64) (ledger.Balance, error) {
 	operation, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -134,7 +134,7 @@ func (r *LedgerRepository) Balance(ctx context.Context, userID int64) (ledger.Ba
 	return balance, nil
 }
 
-// Reconcile verifies every persisted transaction has at least two zero-sum entries.
+// Reconcile 验证每笔持久化交易至少包含两条零和条目。
 func (r *LedgerRepository) Reconcile(ctx context.Context) error {
 	operation, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

@@ -1,6 +1,6 @@
 /**
- * Typed browser client for the Exchange Lab HTTP API.
- * Every response crosses the runtime decoders in contract.ts before UI use.
+ * Exchange Lab HTTP API 的类型化浏览器客户端。
+ * 每个响应在交给界面使用前，都必须经过 contract.ts 的运行时解码器。
  */
 import {
   decodeBalances,
@@ -21,7 +21,7 @@ import {
   type User,
 } from './contract'
 
-/** Represents a sanitized HTTP failure without exposing a response body. */
+/** 表示已脱敏的 HTTP 失败，不暴露响应正文。 */
 export class APIError extends Error {
   constructor(
     readonly status: number,
@@ -60,7 +60,7 @@ export async function getTicker(symbol: string, signal?: AbortSignal): Promise<T
 
 const intervalSeconds = { '1m': 60, '5m': 300, '1h': 3600 } as const
 
-/** Loads the latest bounded interval range using UTC-aligned bucket boundaries. */
+/** 使用 UTC 对齐的时间桶边界加载最新的有界周期范围。 */
 export async function getCandles(
   symbol: string,
   interval: Candle['interval'],

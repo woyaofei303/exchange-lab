@@ -1,17 +1,17 @@
-// Package funding calculates capped rates and zero-sum settlement deltas.
+// Package funding 计算带上限的费率和零和结算差额。
 package funding
 
 import (
 	"errors"
 	"math/big"
 
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/fixedmath"
 )
 
-// ErrInvalidFunding reports invalid rates, prices, scales or arithmetic overflow.
+// ErrInvalidFunding 表示费率、价格、精度无效或发生算术溢出。
 var ErrInvalidFunding = errors.New("invalid funding input")
 
-// ComputeRate combines premium and interest, clamped symmetrically to capBPS.
+// ComputeRate 合并溢价与利率，并按 capBPS 对称限制结果。
 func ComputeRate(premiumBPS, interestBPS, capBPS int64) (int64, error) {
 	if capBPS < 0 || capBPS > 10_000 {
 		return 0, ErrInvalidFunding
@@ -26,7 +26,7 @@ func ComputeRate(premiumBPS, interestBPS, capBPS int64) (int64, error) {
 	return rate, nil
 }
 
-// Payment returns the signed user ledger delta: positive rate means longs pay shorts.
+// Payment 返回有符号的用户账本变动：正费率表示多方向空方支付。
 func Payment(positionSizeAtoms, markPriceAtoms int64, quantityScale uint8, rateBPS int64) (int64, error) {
 	if markPriceAtoms <= 0 || rateBPS < -10_000 || rateBPS > 10_000 {
 		return 0, ErrInvalidFunding
@@ -46,9 +46,8 @@ func Payment(positionSizeAtoms, markPriceAtoms int64, quantityScale uint8, rateB
 	return -payment, nil
 }
 
-// SystemOffset returns the exact insurance-fund ledger delta required to keep
-// all funding entries zero-sum when liquidations leave a temporary one-sided
-// teaching-system exposure.
+// SystemOffset 返回维持所有资金费条目零和所需的精确保险基金账本变动，
+// 用于清算导致教学系统暂时出现单边敞口的情况。
 func SystemOffset(payments []int64) (int64, error) {
 	total := big.NewInt(0)
 	for _, payment := range payments {

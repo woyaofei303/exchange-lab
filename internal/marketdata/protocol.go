@@ -1,4 +1,4 @@
-// Package marketdata validates and sequences the normalized feed protocol.
+// Package marketdata 校验规范化行情源协议并维护其顺序。
 package marketdata
 
 import (
@@ -10,20 +10,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// ProtocolVersion identifies the only accepted market-data envelope version.
+// ProtocolVersion 标识唯一接受的行情信封版本。
 const (
 	ProtocolVersion = 1
 	maxPayloadBytes = 1 << 20
 	maxBookLevels   = 5_000
 )
 
-// EventType identifies the single payload carried by an Event.
+// EventType 标识 Event 携带的唯一载荷类型。
 type EventType string
 
-// Supported normalized market-data payload types.
+// 支持的规范化行情载荷类型。
 const (
 	EventTicker       EventType = "ticker"
 	EventTrade        EventType = "trade"
@@ -31,7 +31,7 @@ const (
 	EventBookDelta    EventType = "orderbook_delta"
 )
 
-// Event is a strictly versioned and sequenced normalized feed message.
+// Event 是严格版本化且有序的规范化行情源消息。
 type Event struct {
 	Version   int        `json:"version"`
 	StreamID  string     `json:"stream_id"`
@@ -44,7 +44,7 @@ type Event struct {
 	OrderBook *OrderBook `json:"orderbook,omitempty"`
 }
 
-// Ticker contains exact decimal-string market summary values.
+// Ticker 包含以精确十进制字符串表示的行情摘要值。
 type Ticker struct {
 	LastPrice   string `json:"last_price"`
 	MarkPrice   string `json:"mark_price"`
@@ -53,7 +53,7 @@ type Ticker struct {
 	Volume      string `json:"volume"`
 }
 
-// Trade contains one normalized public-market execution.
+// Trade 包含一笔规范化的公开市场成交。
 type Trade struct {
 	TradeID  string `json:"trade_id"`
 	Side     string `json:"side"`
@@ -61,13 +61,13 @@ type Trade struct {
 	Quantity string `json:"quantity"`
 }
 
-// Level is one exact decimal-string price and quantity pair.
+// Level 表示一组精确十进制字符串价格和数量。
 type Level struct {
 	Price    string `json:"price"`
 	Quantity string `json:"quantity"`
 }
 
-// OrderBook carries a bounded snapshot or delta for both book sides.
+// OrderBook 携带买卖双方有界的快照或增量数据。
 type OrderBook struct {
 	Bids []Level `json:"bids"`
 	Asks []Level `json:"asks"`
@@ -79,7 +79,7 @@ var (
 	tradeIDPattern        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 )
 
-// Encode validates and serializes one normalized market event.
+// Encode 校验并序列化一个规范化行情事件。
 func Encode(event Event) ([]byte, error) {
 	if err := event.validate(); err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func Encode(event Event) ([]byte, error) {
 	return payload, nil
 }
 
-// Decode strictly parses one bounded event and rejects unknown fields.
+// Decode 严格解析一个大小受限的事件，并拒绝未知字段。
 func Decode(payload []byte) (Event, error) {
 	if len(payload) == 0 || len(payload) > maxPayloadBytes {
 		return Event{}, fmt.Errorf("decode market event: invalid payload size")
@@ -111,7 +111,7 @@ func Decode(payload []byte) (Event, error) {
 	return event, nil
 }
 
-// Subject maps an event to its stable market.<symbol>.<kind> subject.
+// Subject 将事件映射到稳定的 market.<symbol>.<kind> 主题。
 func Subject(event Event) (string, error) {
 	if !protocolSymbolPattern.MatchString(event.Symbol) {
 		return "", fmt.Errorf("market subject: invalid symbol")

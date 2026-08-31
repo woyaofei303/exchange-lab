@@ -2,12 +2,12 @@ package trading
 
 import "fmt"
 
-// Quantity is an exact fixed-point order quantity.
+// Quantity 表示精确的定点订单数量。
 type Quantity struct {
 	value fixed
 }
 
-// ParseQuantity parses a positive decimal quantity at the requested scale.
+// ParseQuantity 按指定精度解析正十进制数量。
 func ParseQuantity(text string, scale uint8) (Quantity, error) {
 	value, err := parseFixed(text, scale)
 	if err != nil {
@@ -19,17 +19,17 @@ func ParseQuantity(text string, scale uint8) (Quantity, error) {
 	return Quantity{value: value}, nil
 }
 
-// Atoms returns the integer source-of-truth value at Scale decimal places.
+// Atoms 返回按 Scale 位小数表示的权威整数值。
 func (q Quantity) Atoms() int64 {
 	return q.value.atoms
 }
 
-// Scale returns the number of decimal places represented by Atoms.
+// Scale 返回 Atoms 所表示的小数位数。
 func (q Quantity) Scale() uint8 {
 	return q.value.scale
 }
 
-// String returns the exact fixed-scale decimal representation.
+// String 返回精确的定点十进制表示。
 func (q Quantity) String() string {
 	return q.value.String()
 }

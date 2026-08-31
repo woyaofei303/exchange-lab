@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/platform/websocketfeed"
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/platform/websocketfeed"
 )
 
 func TestSimulatorHandlerStreamsProtocolEvents(t *testing.T) {

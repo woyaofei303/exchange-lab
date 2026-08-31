@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds principal, scope and evidence audit records for read-only tool calls.
+-- 添加只读工具调用的主体、范围和证据审计记录。
 CREATE TABLE tool_audit_logs (
     id TEXT PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

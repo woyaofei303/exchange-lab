@@ -8,28 +8,28 @@ import (
 	"math"
 	"time"
 
+	"exchange-lab/internal/eventing"
+	"exchange-lab/internal/matching"
+	"exchange-lab/internal/trading"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	"github.com/woyaofei303/exchange-lab/internal/matching"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
-// MatchingConsumer is the stable processed-event identity for order matching.
+// MatchingConsumer 是订单撮合已处理事件的稳定标识。
 const MatchingConsumer = "matching-v1"
 
-// MatchingRepository atomically advances book, trades, orders and Outbox facts.
+// MatchingRepository 原子推进订单簿、成交、订单和 Outbox 事实。
 type MatchingRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewMatchingRepository constructs a context-bounded matching repository.
+// NewMatchingRepository 创建受上下文限制的撮合仓储。
 func NewMatchingRepository(pool *pgxpool.Pool, timeout time.Duration) *MatchingRepository {
 	return &MatchingRepository{pool: pool, timeout: timeout}
 }
 
-// Process applies one ordered event in a Serializable, idempotent transaction.
+// Process 在 Serializable 幂等事务中应用一个有序事件。
 func (r *MatchingRepository) Process(ctx context.Context, envelope eventing.Envelope, streamSequence uint64, receivedAt time.Time) (int, bool, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 || streamSequence == 0 || streamSequence > math.MaxInt64 {
 		return 0, false, matching.ErrInvalidOrder

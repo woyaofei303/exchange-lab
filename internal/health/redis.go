@@ -8,11 +8,11 @@ import (
 
 type redisChecker struct{ client *redis.Client }
 
-// NewRedisChecker adapts a context-aware Redis client ping.
+// NewRedisChecker 适配支持上下文的 Redis 客户端 PING。
 func NewRedisChecker(client *redis.Client) Checker { return redisChecker{client: client} }
 
-// Name returns the stable readiness dependency key.
+// Name 返回稳定的就绪检查依赖键。
 func (redisChecker) Name() string { return "redis" }
 
-// Check performs one context-bounded Redis PING.
+// Check 执行一次受上下文限制的 Redis PING。
 func (c redisChecker) Check(ctx context.Context) error { return c.client.Ping(ctx).Err() }

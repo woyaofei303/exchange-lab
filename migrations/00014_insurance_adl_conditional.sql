@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds reduce-only orders, insurance facts, ADL evidence and price conditions.
+-- 添加只减仓订单、保险事实、ADL 证据和价格条件。
 ALTER TABLE orders ADD COLUMN reduce_only BOOLEAN NOT NULL DEFAULT false;
 CREATE TABLE insurance_fund_entries (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/httpserver"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	"github.com/woyaofei303/exchange-lab/internal/market"
+	"exchange-lab/internal/httpserver"
+	"exchange-lab/internal/ledger"
+	"exchange-lab/internal/market"
 )
 
 type fakeLedger struct {

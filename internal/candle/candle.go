@@ -1,4 +1,4 @@
-// Package candle builds exact event-time OHLC candles and deterministic rollups.
+// Package candle 构建基于事件时间的精确 OHLC K 线和确定性聚合结果。
 package candle
 
 import (
@@ -8,20 +8,20 @@ import (
 	"sort"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// Interval is a supported candle width in seconds.
+// Interval 表示受支持的 K 线周期，单位为秒。
 type Interval int32
 
-// Supported base and rollup intervals.
+// 支持的基础周期和聚合周期。
 const (
 	OneMinute   Interval = 60
 	FiveMinutes Interval = 300
 	OneHour     Interval = 3600
 )
 
-// ParseInterval converts the public interval token into its exact duration.
+// ParseInterval 将公开周期标记转换为精确时长。
 func ParseInterval(value string) (Interval, error) {
 	switch value {
 	case "1m":
@@ -35,7 +35,7 @@ func ParseInterval(value string) (Interval, error) {
 	}
 }
 
-// String returns the public interval token or an empty string for an invalid value.
+// String 返回公开周期标记；值无效时返回空字符串。
 func (i Interval) String() string {
 	switch i {
 	case OneMinute:
@@ -49,12 +49,12 @@ func (i Interval) String() string {
 	}
 }
 
-// Duration returns the interval width.
+// Duration 返回周期宽度。
 func (i Interval) Duration() time.Duration {
 	return time.Duration(i) * time.Second
 }
 
-// Trade is the exact event-time input used by candle aggregation.
+// Trade 是 K 线聚合使用的精确事件时间输入。
 type Trade struct {
 	StreamID      string
 	TradeID       string
@@ -67,7 +67,7 @@ type Trade struct {
 	QuantityScale uint8
 }
 
-// Candle stores exact OHLCV atoms plus ordering evidence for late trades.
+// Candle 存储精确的 OHLCV 最小单位值及延迟成交的排序证据。
 type Candle struct {
 	Symbol         string
 	Interval       Interval
@@ -87,7 +87,7 @@ type Candle struct {
 	LastSequence   uint64
 }
 
-// View is the decimal-string candle contract exposed over JSON.
+// View 是通过 JSON 暴露的十进制字符串 K 线契约。
 type View struct {
 	Symbol     string    `json:"symbol"`
 	Interval   string    `json:"interval"`
@@ -104,7 +104,7 @@ type View struct {
 
 var candleSymbolPattern = regexp.MustCompile(`^[A-Z0-9]{4,24}-PERP$`)
 
-// ApplyTrade creates or updates one bucket, preserving event-time open and close.
+// ApplyTrade 创建或更新一个时间桶，并保留基于事件时间的开盘与收盘顺序。
 func ApplyTrade(current *Candle, trade Trade, interval Interval) (Candle, error) {
 	if err := validateTrade(trade); err != nil {
 		return Candle{}, err
@@ -152,7 +152,7 @@ func ApplyTrade(current *Candle, trade Trade, interval Interval) (Candle, error)
 	return result, nil
 }
 
-// BucketStart floors a UTC event time to its interval boundary.
+// BucketStart 将 UTC 事件时间向下取整到所属周期边界。
 func BucketStart(eventTime time.Time, interval Interval) time.Time {
 	seconds := int64(interval)
 	if seconds <= 0 {
@@ -162,7 +162,7 @@ func BucketStart(eventTime time.Time, interval Interval) time.Time {
 	return time.Unix(unix-unix%seconds, 0).UTC()
 }
 
-// View validates a candle and renders exact decimal strings for transport.
+// View 校验 K 线并生成用于传输的精确十进制字符串。
 func (c Candle) View() (View, error) {
 	if err := c.validate(); err != nil {
 		return View{}, err
@@ -204,7 +204,7 @@ func validateTrade(trade Trade) error {
 	return nil
 }
 
-// Rollup combines ordered one-minute candles into a five-minute or hourly candle.
+// Rollup 将有序的一分钟 K 线合并为五分钟或一小时 K 线。
 func Rollup(source []Candle, target Interval) (Candle, error) {
 	if len(source) == 0 || (target != FiveMinutes && target != OneHour) {
 		return Candle{}, fmt.Errorf("roll up candles: invalid input")
@@ -258,7 +258,7 @@ func Rollup(source []Candle, target Interval) (Candle, error) {
 	return result, nil
 }
 
-// RepairGaps fills missing buckets with final zero-volume candles at the prior close.
+// RepairGaps 使用以前收盘价生成的最终零成交量 K 线填补缺失时间桶。
 func RepairGaps(source []Candle, start, end time.Time, interval Interval) ([]Candle, error) {
 	if interval.String() == "" || !start.Before(end) || !BucketStart(start, interval).Equal(start.UTC()) || !BucketStart(end, interval).Equal(end.UTC()) {
 		return nil, fmt.Errorf("repair candle gaps: invalid range")

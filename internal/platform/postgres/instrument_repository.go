@@ -5,30 +5,30 @@ import (
 	"fmt"
 	"time"
 
+	"exchange-lab/internal/trading"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
-// InstrumentRepository stores contract filters as integer atoms plus explicit
-// scales. PostgreSQL is the source of truth for this data.
+// InstrumentRepository 以整数最小单位和明确精度存储合约过滤规则。
+// PostgreSQL 是这些数据的事实来源。
 type InstrumentRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewInstrumentRepository constructs a context-bounded instrument repository.
+// NewInstrumentRepository 创建受上下文限制的交易品种仓储。
 func NewInstrumentRepository(pool *pgxpool.Pool, timeout time.Duration) *InstrumentRepository {
 	return &InstrumentRepository{pool: pool, timeout: timeout}
 }
 
-// Instruments implements market.InstrumentReader without coupling this
-// persistence package to the transport-facing composite implementation.
+// Instruments 实现 market.InstrumentReader，且不会将该持久化包
+// 与面向传输层的组合实现耦合。
 func (r *InstrumentRepository) Instruments(ctx context.Context, symbol string) ([]trading.Instrument, error) {
 	return r.List(ctx, symbol)
 }
 
-// List returns active contracts, optionally filtered by an exact symbol.
+// List 返回有效合约，并可选择按精确交易对过滤。
 func (r *InstrumentRepository) List(ctx context.Context, symbol string) ([]trading.Instrument, error) {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return nil, fmt.Errorf("list instruments: invalid repository configuration")
@@ -76,7 +76,7 @@ func (r *InstrumentRepository) List(ctx context.Context, symbol string) ([]tradi
 	return result, nil
 }
 
-// Save inserts or updates one validated contract configuration.
+// Save 插入或更新一个已校验的合约配置。
 func (r *InstrumentRepository) Save(ctx context.Context, instrument trading.Instrument) error {
 	if r == nil || r.pool == nil || r.timeout <= 0 {
 		return fmt.Errorf("save instrument: invalid repository configuration")

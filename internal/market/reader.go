@@ -1,4 +1,4 @@
-// Package market composes authoritative and cache-backed market read models.
+// Package market 组合权威数据源和缓存支持的行情读取模型。
 package market
 
 import (
@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/trading"
 )
 
-// Ticker is a read-only market-data view. Decimal fields remain strings so the
-// transport layer cannot accidentally treat them as binary floating point.
+// Ticker 是只读行情视图。十进制字段保持为字符串，
+// 防止传输层误将其作为二进制浮点数处理。
 type Ticker struct {
 	Symbol      string
 	LastPrice   string
@@ -21,30 +21,30 @@ type Ticker struct {
 	UpdatedAt   time.Time
 }
 
-// Reader is the business seam used by read-only market-data transports.
+// Reader 是只读行情传输层使用的业务接口。
 type Reader interface {
 	InstrumentReader
 	TickerReader
 }
 
-// InstrumentReader owns contract metadata reads.
+// InstrumentReader 负责读取合约元数据。
 type InstrumentReader interface {
 	Instruments(context.Context, string) ([]trading.Instrument, error)
 }
 
-// TickerReader owns latest market snapshot reads.
+// TickerReader 负责读取最新行情快照。
 type TickerReader interface {
 	Tickers(context.Context, string) ([]Ticker, error)
 }
 
-// CompositeReader keeps instrument persistence and ticker delivery replaceable
-// independently while exposing one transport-facing Reader.
+// CompositeReader 使交易品种持久化和行情投递可以独立替换，
+// 同时向传输层提供统一的 Reader。
 type CompositeReader struct {
 	instruments InstrumentReader
 	tickers     TickerReader
 }
 
-// NewCompositeReader combines separate authoritative instrument and ticker readers.
+// NewCompositeReader 组合相互独立的权威交易品种和行情读取器。
 func NewCompositeReader(instruments InstrumentReader, tickers TickerReader) (*CompositeReader, error) {
 	if instruments == nil || tickers == nil {
 		return nil, fmt.Errorf("create market reader: instrument and ticker readers are required")
@@ -52,24 +52,23 @@ func NewCompositeReader(instruments InstrumentReader, tickers TickerReader) (*Co
 	return &CompositeReader{instruments: instruments, tickers: tickers}, nil
 }
 
-// Instruments delegates to the authoritative instrument reader.
+// Instruments 委托给权威交易品种读取器。
 func (r *CompositeReader) Instruments(ctx context.Context, symbol string) ([]trading.Instrument, error) {
 	return r.instruments.Instruments(ctx, symbol)
 }
 
-// Tickers delegates to the authoritative ticker reader.
+// Tickers 委托给权威行情读取器。
 func (r *CompositeReader) Tickers(ctx context.Context, symbol string) ([]Ticker, error) {
 	return r.tickers.Tickers(ctx, symbol)
 }
 
-// StaticReader is the Week 3 in-memory adapter. Later market-data work can
-// replace it without changing HTTP handlers.
+// StaticReader 是第 3 周的内存适配器，后续行情功能可在不修改 HTTP 处理器的情况下替换它。
 type StaticReader struct {
 	instruments []trading.Instrument
 	tickers     []Ticker
 }
 
-// NewStaticReader copies its inputs so callers cannot mutate reader state.
+// NewStaticReader 复制输入，防止调用方修改读取器状态。
 func NewStaticReader(instruments []trading.Instrument, tickers []Ticker) *StaticReader {
 	return &StaticReader{
 		instruments: append([]trading.Instrument(nil), instruments...),
@@ -77,7 +76,7 @@ func NewStaticReader(instruments []trading.Instrument, tickers []Ticker) *Static
 	}
 }
 
-// Instruments returns every instrument, or only the exact symbol requested.
+// Instruments 返回全部交易品种，或仅返回精确匹配请求交易对的品种。
 func (r *StaticReader) Instruments(ctx context.Context, symbol string) ([]trading.Instrument, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -91,7 +90,7 @@ func (r *StaticReader) Instruments(ctx context.Context, symbol string) ([]tradin
 	return result, nil
 }
 
-// Tickers returns every ticker, or only the exact symbol requested.
+// Tickers 返回全部行情，或仅返回精确匹配请求交易对的行情。
 func (r *StaticReader) Tickers(ctx context.Context, symbol string) ([]Ticker, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

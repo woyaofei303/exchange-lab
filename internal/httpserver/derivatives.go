@@ -8,17 +8,17 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/risk"
+	"exchange-lab/internal/trading"
 )
 
-// PositionReader returns user-scoped persisted position projections.
+// PositionReader 返回限定到用户范围的持久化仓位投影。
 type PositionReader interface {
 	List(context.Context, int64) ([]position.View, error)
 }
 
-// DerivativesService exposes risk, margin, funding and conditional-order operations.
+// DerivativesService 提供风险、保证金、资金费和条件单操作。
 type DerivativesService interface {
 	Snapshot(context.Context, int64, string) (risk.Snapshot, error)
 	SetLeverage(context.Context, int64, string, int64) error

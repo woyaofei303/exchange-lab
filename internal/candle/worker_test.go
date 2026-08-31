@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/marketdata"
 )
 
 func TestWorkerStoresOneMinuteRollsUpAndPublishesExactViews(t *testing.T) {

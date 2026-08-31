@@ -1,4 +1,4 @@
-/** Historical/realtime candle chart adapter; Number conversion is display-only. */
+/** 历史/实时 K 线图适配器；Number 转换仅用于显示。 */
 import { useEffect, useId, useState } from 'react'
 import { dispose, init, type KLineData } from 'klinecharts'
 
@@ -13,7 +13,7 @@ type Props = {
 }
 
 function chartCandle(candle: Candle): KLineData {
-  // Number conversion is isolated to the visualization adapter. API/domain values remain exact strings.
+  // Number 转换仅限可视化适配器；API/领域值仍保持为精确字符串。
   return {
     timestamp: Date.parse(candle.open_time),
     open: Number(candle.open),
@@ -24,7 +24,7 @@ function chartCandle(candle: Candle): KLineData {
   }
 }
 
-/** Binds one symbol/interval to history loading and a disposable realtime stream. */
+/** 将一个交易对/周期绑定到历史加载和可释放的实时数据流。 */
 export function KLinePanel({ symbol, interval, onState }: Props) {
   const id = `kline-${useId().replaceAll(':', '')}`
   const [error, setError] = useState('')

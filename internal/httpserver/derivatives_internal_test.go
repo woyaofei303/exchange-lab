@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/risk"
+	"exchange-lab/internal/risk"
 )
 
 func TestPublicRiskIncludesServerComputedLiquidationDistance(t *testing.T) {

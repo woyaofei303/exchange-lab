@@ -1,4 +1,4 @@
-/** Main read-only market shell plus the authenticated contract workflow. */
+/** 主只读行情外壳及经过身份认证的合约流程。 */
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 

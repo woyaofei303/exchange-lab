@@ -6,28 +6,28 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/marketdata"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
+	"exchange-lab/internal/marketdata"
+	"exchange-lab/internal/trading"
 )
 
-// Store persists a price result together with the observations that produced it.
+// Store 持久化价格结果及产生该结果的观测值。
 type Store interface {
 	Save(context.Context, string, uint8, []Source, IndexResult, int64, int64) error
 }
 
-// Publisher emits a derived mark-price update after persistence succeeds.
+// Publisher 在持久化成功后发布计算出的标记价格更新。
 type Publisher interface {
 	Publish(context.Context, string, []byte) error
 }
 
-// Worker converts normalized ticker events into persisted index and mark prices.
+// Worker 将规范化行情事件转换为持久化的指数价格和标记价格。
 type Worker struct {
 	store     Store
 	publisher Publisher
 	now       func() time.Time
 }
 
-// Update is the versioned mark-price event sent to downstream readers.
+// Update 是发送给下游读取方的带版本标记价格事件。
 type Update struct {
 	Version    int       `json:"version"`
 	Symbol     string    `json:"symbol"`
@@ -38,7 +38,7 @@ type Update struct {
 	AsOf       time.Time `json:"as_of"`
 }
 
-// NewWorker validates the price worker dependencies.
+// NewWorker 校验价格工作进程的依赖项。
 func NewWorker(store Store, publisher Publisher, now func() time.Time) (*Worker, error) {
 	if store == nil || publisher == nil {
 		return nil, fmt.Errorf("create price worker: invalid dependencies")
@@ -49,7 +49,7 @@ func NewWorker(store Store, publisher Publisher, now func() time.Time) (*Worker,
 	return &Worker{store: store, publisher: publisher, now: now}, nil
 }
 
-// Handle processes one normalized ticker and publishes only after durable save.
+// Handle 处理一条规范化行情，并且只在可靠保存后发布。
 func (w *Worker) Handle(ctx context.Context, payload []byte) error {
 	event, err := marketdata.Decode(payload)
 	if err != nil || event.Type != marketdata.EventTicker || event.Ticker == nil {

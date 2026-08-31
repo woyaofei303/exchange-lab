@@ -1,19 +1,19 @@
-// Package liquidation evaluates mark-price risk and its idempotent state machine.
+// Package liquidation 评估标记价格风险及其幂等状态机。
 package liquidation
 
 import (
 	"errors"
+	"exchange-lab/internal/fixedmath"
 	"fmt"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
 )
 
-// Liquidation errors distinguish invalid risk input from illegal state transitions.
+// 清算错误会区分无效风险输入和非法状态转换。
 var (
 	ErrInvalidSnapshot = errors.New("invalid liquidation snapshot")
 	ErrTransition      = errors.New("invalid liquidation transition")
 )
 
-// Snapshot is the immutable mark-price risk input for one position version.
+// Snapshot 是某一仓位版本不可变的标记价格风险输入。
 type Snapshot struct {
 	UserID                                                                                         int64
 	Symbol                                                                                         string
@@ -22,7 +22,7 @@ type Snapshot struct {
 	RiskVersion                                                                                    int64
 }
 
-// Decision identifies whether liquidation is required and its idempotency key.
+// Decision 标识是否需要清算及其幂等键。
 type Decision struct {
 	Required             bool
 	JobKey               string
@@ -30,7 +30,7 @@ type Decision struct {
 	Reason               string
 }
 
-// Evaluate compares margin balance with maintenance and derives bankruptcy price.
+// Evaluate 比较保证金余额与维持保证金，并计算破产价格。
 func Evaluate(s Snapshot) (Decision, error) {
 	if s.UserID <= 0 || s.Symbol == "" || s.PositionSizeAtoms == 0 || s.EntryPriceAtoms <= 0 || s.MarkPriceAtoms <= 0 || s.MarginBalanceAtoms < 0 || s.MaintenanceMarginAtoms < 0 || s.RiskVersion <= 0 {
 		return Decision{}, ErrInvalidSnapshot
@@ -58,10 +58,10 @@ func Evaluate(s Snapshot) (Decision, error) {
 	return Decision{Required: required, JobKey: fmt.Sprintf("liq:%d:%s:%d", s.UserID, s.Symbol, s.RiskVersion), BankruptcyPriceAtoms: bankruptcy, Reason: "mark_price_margin_ratio"}, nil
 }
 
-// State is the durable liquidation job lifecycle.
+// State 表示持久化清算任务的生命周期。
 type State string
 
-// Supported liquidation states.
+// 支持的清算状态。
 const (
 	StatePending   State = "pending"
 	StateExecuting State = "executing"
@@ -70,10 +70,10 @@ const (
 	StateParked    State = "parked"
 )
 
-// Event is an accepted liquidation state-machine input.
+// Event 表示清算状态机接受的输入。
 type Event string
 
-// Supported liquidation transition events.
+// 支持的清算状态转换事件。
 const (
 	EventStarted Event = "started"
 	EventFilled  Event = "filled"
@@ -81,7 +81,7 @@ const (
 	EventFailed  Event = "failed"
 )
 
-// Transition applies one valid liquidation event or returns ErrTransition.
+// Transition 应用一个有效清算事件，否则返回 ErrTransition。
 func Transition(state State, event Event) (State, error) {
 	switch {
 	case state == StatePending && event == EventStarted:

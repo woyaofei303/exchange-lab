@@ -1,12 +1,12 @@
-// Command mcp-server exposes audited read-only exchange tools over MCP.
+// Command mcp-server 通过 MCP 提供经过审计的只读交易所工具。
 package main
 
 import (
 	"context"
 	"errors"
+	store "exchange-lab/internal/platform/postgres"
+	"exchange-lab/internal/readtools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
-	"github.com/woyaofei303/exchange-lab/internal/readtools"
 	"log/slog"
 	"os"
 	"strconv"

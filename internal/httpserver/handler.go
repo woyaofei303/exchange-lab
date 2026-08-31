@@ -1,4 +1,4 @@
-// Package httpserver exposes strict HTTP contracts over exchange services.
+// Package httpserver 在交易所服务之上提供严格的 HTTP 契约。
 package httpserver
 
 import (
@@ -10,15 +10,15 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/woyaofei303/exchange-lab/internal/candle"
-	"github.com/woyaofei303/exchange-lab/internal/health"
-	"github.com/woyaofei303/exchange-lab/internal/identity"
-	"github.com/woyaofei303/exchange-lab/internal/ledger"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/observability"
-	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
-	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
-	"github.com/woyaofei303/exchange-lab/internal/realtime"
+	"exchange-lab/internal/candle"
+	"exchange-lab/internal/health"
+	"exchange-lab/internal/identity"
+	"exchange-lab/internal/ledger"
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/observability"
+	domainorder "exchange-lab/internal/order"
+	"exchange-lab/internal/platform/rediscache"
+	"exchange-lab/internal/realtime"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -27,7 +27,7 @@ var (
 	symbolPattern   = regexp.MustCompile(`^[A-Z0-9]{4,24}-PERP$`)
 )
 
-// Readiness supplies dependency status for the public readiness route.
+// Readiness 为公开的就绪检查路由提供依赖状态。
 type Readiness interface {
 	Check(context.Context) health.Report
 }
@@ -76,22 +76,22 @@ type errorResponse struct {
 	Error apiError `json:"error"`
 }
 
-// NewHandler builds the health and read-only market API surface.
+// NewHandler 构建健康检查和只读行情 API。
 func NewHandler(readiness Readiness, markets market.Reader, logger *slog.Logger, requestTimeout time.Duration) http.Handler {
 	return newHandler(readiness, markets, Features{}, logger, requestTimeout)
 }
 
-// CandleReader returns bounded historical candle ranges.
+// CandleReader 返回有界的历史 K 线范围。
 type CandleReader interface {
 	List(context.Context, candle.Query) ([]candle.Candle, error)
 }
 
-// NewHandlerWithCandles adds historical and realtime candle routes.
+// NewHandlerWithCandles 添加历史和实时 K 线路由。
 func NewHandlerWithCandles(readiness Readiness, markets market.Reader, candles CandleReader, hub *realtime.Hub, logger *slog.Logger, requestTimeout time.Duration) http.Handler {
 	return newHandler(readiness, markets, Features{Candles: candles, CandleHub: hub}, logger, requestTimeout)
 }
 
-// IdentityService is the authentication and authorization surface used by handlers.
+// IdentityService 是处理器使用的身份验证和授权接口。
 type IdentityService interface {
 	Register(context.Context, string, string) (identity.User, error)
 	Login(context.Context, string, string) (string, identity.Session, error)
@@ -101,25 +101,25 @@ type IdentityService interface {
 	AuditLog(context.Context, identity.User, int) ([]identity.AuditEvent, error)
 }
 
-// LoginLimiter enforces fail-closed credential attempt limits.
+// LoginLimiter 执行失败关闭的凭据尝试限制。
 type LoginLimiter interface {
 	Allow(context.Context, string) (rediscache.RateDecision, error)
 }
 
-// LedgerService exposes simulated funding and balance reads.
+// LedgerService 提供模拟入金和余额查询。
 type LedgerService interface {
 	Faucet(context.Context, int64, int64, string) (ledger.FaucetResult, error)
 	Balance(context.Context, int64) (ledger.Balance, error)
 }
 
-// OrderService exposes user-scoped order commands and queries.
+// OrderService 提供限定到用户范围的订单命令和查询。
 type OrderService interface {
 	Place(context.Context, int64, domainorder.PlaceCommand) (domainorder.Result, error)
 	Cancel(context.Context, int64, string, string) (domainorder.Result, error)
 	List(context.Context, int64, int) ([]domainorder.Order, error)
 }
 
-// Features enables optional route groups only when their dependencies are present.
+// Features 仅在依赖存在时启用可选路由组。
 type Features struct {
 	Candles          CandleReader
 	CandleHub        *realtime.Hub
@@ -136,7 +136,7 @@ type Features struct {
 	Metrics          *observability.Metrics
 }
 
-// NewHandlerWithFeatures builds the complete API from explicitly enabled services.
+// NewHandlerWithFeatures 根据明确启用的服务构建完整 API。
 func NewHandlerWithFeatures(readiness Readiness, markets market.Reader, features Features, logger *slog.Logger, requestTimeout time.Duration) http.Handler {
 	return newHandler(readiness, markets, features, logger, requestTimeout)
 }

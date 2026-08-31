@@ -2,9 +2,8 @@ package trading
 
 import "fmt"
 
-// InstrumentSpec contains the precision and risk filters for one USDT-margined
-// perpetual contract. Decimal configuration is supplied as strings so no
-// binary floating-point value can enter the domain.
+// InstrumentSpec 包含一个 USDT 保证金永续合约的精度和风险过滤规则。
+// 十进制配置以字符串提供，避免二进制浮点值进入领域层。
 type InstrumentSpec struct {
 	Base          Asset
 	Quote         Asset
@@ -15,7 +14,7 @@ type InstrumentSpec struct {
 	MinNotional   string
 }
 
-// Instrument owns decimal parsing and order-filter validation for one contract.
+// Instrument 负责单个合约的十进制解析和订单过滤校验。
 type Instrument struct {
 	base          Asset
 	quote         Asset
@@ -26,7 +25,7 @@ type Instrument struct {
 	minNotional   Money
 }
 
-// NewInstrument constructs a perpetual contract and rejects inconsistent filters.
+// NewInstrument 创建永续合约，并拒绝不一致的过滤规则。
 func NewInstrument(spec InstrumentSpec) (Instrument, error) {
 	if spec.Base.Code() == "" || spec.Quote.Code() == "" {
 		return Instrument{}, fmt.Errorf("%w: base and quote assets are required", ErrInvalidInstrument)
@@ -68,47 +67,47 @@ func NewInstrument(spec InstrumentSpec) (Instrument, error) {
 	}, nil
 }
 
-// Symbol returns the canonical perpetual contract symbol.
+// Symbol 返回规范的永续合约交易对符号。
 func (i Instrument) Symbol() string {
 	return i.base.Code() + i.quote.Code() + "-PERP"
 }
 
-// Base returns the contract's underlying asset.
+// Base 返回合约的标的资产。
 func (i Instrument) Base() Asset {
 	return i.base
 }
 
-// Quote returns the contract's margin and settlement asset.
+// Quote 返回合约的保证金和结算资产。
 func (i Instrument) Quote() Asset {
 	return i.quote
 }
 
-// PriceScale returns the maximum number of price decimal places.
+// PriceScale 返回价格允许的最大小数位数。
 func (i Instrument) PriceScale() uint8 {
 	return i.priceScale
 }
 
-// QuantityScale returns the maximum number of quantity decimal places.
+// QuantityScale 返回数量允许的最大小数位数。
 func (i Instrument) QuantityScale() uint8 {
 	return i.quantityScale
 }
 
-// PriceStep returns the configured tick size.
+// PriceStep 返回配置的最小价格变动单位。
 func (i Instrument) PriceStep() Price {
 	return i.priceStep
 }
 
-// QuantityStep returns the configured order quantity increment.
+// QuantityStep 返回配置的订单数量递增步长。
 func (i Instrument) QuantityStep() Quantity {
 	return i.quantityStep
 }
 
-// MinNotional returns the minimum accepted order value in the quote asset.
+// MinNotional 返回以报价资产计价的最小可接受订单价值。
 func (i Instrument) MinNotional() Money {
 	return i.minNotional
 }
 
-// ParsePrice parses a price using this instrument's configured precision.
+// ParsePrice 使用该交易品种配置的精度解析价格。
 func (i Instrument) ParsePrice(text string) (Price, error) {
 	if !i.configured() {
 		return Price{}, fmt.Errorf("parse instrument price: %w", ErrInvalidInstrument)
@@ -116,7 +115,7 @@ func (i Instrument) ParsePrice(text string) (Price, error) {
 	return ParsePrice(text, i.priceScale)
 }
 
-// ParseQuantity parses a quantity using this instrument's configured precision.
+// ParseQuantity 使用该交易品种配置的精度解析数量。
 func (i Instrument) ParseQuantity(text string) (Quantity, error) {
 	if !i.configured() {
 		return Quantity{}, fmt.Errorf("parse instrument quantity: %w", ErrInvalidInstrument)
@@ -124,8 +123,8 @@ func (i Instrument) ParseQuantity(text string) (Quantity, error) {
 	return ParseQuantity(text, i.quantityScale)
 }
 
-// ValidateLimitOrder applies this instrument's precision, step and minimum
-// notional filters to an exact price and quantity.
+// ValidateLimitOrder 使用该交易品种的精度、步长和最小名义价值规则，
+// 校验精确的价格与数量。
 func (i Instrument) ValidateLimitOrder(price Price, quantity Quantity) error {
 	if !i.configured() {
 		return fmt.Errorf("validate limit order: %w", ErrInvalidInstrument)

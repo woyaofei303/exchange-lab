@@ -1,4 +1,4 @@
-// Command event-worker publishes Outbox events and runs durable consumers.
+// Command event-worker 发布 Outbox 事件并运行持久消费者。
 package main
 
 import (
@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"exchange-lab/internal/eventing"
+	store "exchange-lab/internal/platform/postgres"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/woyaofei303/exchange-lab/internal/eventing"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
 )
 
 type workerConfig struct {

@@ -1,20 +1,20 @@
-// Package insurance covers bankruptcy loss and ranks auditable ADL candidates.
+// Package insurance 弥补破产损失，并对可审计的 ADL 候选者排序。
 package insurance
 
 import (
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/fixedmath"
 	"math/big"
 	"sort"
 )
 
-// ErrInvalidInsurance reports malformed fund, ADL or conditional-order input.
+// ErrInvalidInsurance 表示基金、ADL 或条件单输入格式错误。
 var ErrInvalidInsurance = errors.New("invalid insurance input")
 
-// CoverResult splits a bankruptcy loss between insurance and residual ADL evidence.
+// CoverResult 将破产损失拆分为保险基金承担部分和剩余 ADL 证据。
 type CoverResult struct{ InsuranceDebitAtoms, ADLShortfallAtoms, RemainingFundAtoms int64 }
 
-// CoverLoss debits no more than the available insurance balance.
+// CoverLoss 扣减的金额不会超过可用保险基金余额。
 func CoverLoss(fund, loss int64) (CoverResult, error) {
 	if fund < 0 || loss < 0 {
 		return CoverResult{}, ErrInvalidInsurance
@@ -26,10 +26,10 @@ func CoverLoss(fund, loss int64) (CoverResult, error) {
 	return CoverResult{InsuranceDebitAtoms: debit, ADLShortfallAtoms: loss - debit, RemainingFundAtoms: fund - debit}, nil
 }
 
-// Candidate is ranked by profit times leverage for simplified ADL evidence.
+// Candidate 按利润乘杠杆排序，作为简化的 ADL 证据。
 type Candidate struct{ UserID, ProfitAtoms, Leverage int64 }
 
-// RankADL returns a detached deterministic ranking with user ID as the tie-breaker.
+// RankADL 返回独立的确定性排序，并使用用户 ID 打破平局。
 func RankADL(items []Candidate) ([]Candidate, error) {
 	result := append([]Candidate(nil), items...)
 	for _, v := range result {
@@ -49,14 +49,14 @@ func RankADL(items []Candidate) ([]Candidate, error) {
 	return result, nil
 }
 
-// Conditional describes a reduce-only price trigger for an existing position.
+// Conditional 描述现有仓位的只减仓价格触发条件。
 type Conditional struct {
 	ID                                   string
 	PositionSizeAtoms, TriggerPriceAtoms int64
 	TriggerDirection, TriggerSource      string
 }
 
-// TriggeredOrder is the safe reduce-only action derived from a condition.
+// TriggeredOrder 是根据条件生成的安全只减仓操作。
 type TriggeredOrder struct {
 	Triggered     bool
 	Side          string
@@ -64,7 +64,7 @@ type TriggeredOrder struct {
 	ReduceOnly    bool
 }
 
-// TriggerConditional evaluates one price and never produces a position-expanding order.
+// TriggerConditional 评估一个价格，绝不会生成扩大仓位的订单。
 func TriggerConditional(condition Conditional, currentPriceAtoms int64) (TriggeredOrder, error) {
 	if condition.ID == "" || condition.PositionSizeAtoms == 0 || condition.TriggerPriceAtoms <= 0 || currentPriceAtoms <= 0 || (condition.TriggerSource != "mark" && condition.TriggerSource != "last") || (condition.TriggerDirection != "lte" && condition.TriggerDirection != "gte") {
 		return TriggeredOrder{}, ErrInvalidInsurance

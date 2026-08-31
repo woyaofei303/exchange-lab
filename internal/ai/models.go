@@ -1,4 +1,4 @@
-// Package ai produces evidence-bound risk explanations without trading writes.
+// Package ai 生成受证据约束的风险解释，不执行交易写入。
 package ai
 
 import (
@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// DeterministicModel provides a local, repeatable fallback with no network dependency.
+// DeterministicModel 提供无需网络依赖、可重复的本地后备实现。
 type DeterministicModel struct{}
 
-// Generate returns a conservative summary derived only from the supplied facts.
+// Generate 返回仅根据所提供事实生成的保守摘要。
 func (DeterministicModel) Generate(_ context.Context, prompt string, _ map[string]any) ([]byte, Usage, error) {
 	var input modelInput
 	if err := json.Unmarshal([]byte(prompt), &input); err != nil {
@@ -39,13 +39,13 @@ func (DeterministicModel) Generate(_ context.Context, prompt string, _ map[strin
 	return payload, Usage{}, err
 }
 
-// OpenAIModel adapts structured Responses output to the Model contract.
+// OpenAIModel 将结构化 Responses 输出适配到 Model 契约。
 type OpenAIModel struct {
 	client openai.Client
 	model  string
 }
 
-// NewOpenAIModel validates credentials and model name without logging either value.
+// NewOpenAIModel 校验凭据和模型名称，且不会记录这两个值。
 func NewOpenAIModel(apiKey, model string) (*OpenAIModel, error) {
 	if strings.TrimSpace(apiKey) == "" || strings.TrimSpace(model) == "" {
 		return nil, fmt.Errorf("create OpenAI model: missing configuration")
@@ -53,7 +53,7 @@ func NewOpenAIModel(apiKey, model string) (*OpenAIModel, error) {
 	return &OpenAIModel{client: openai.NewClient(option.WithAPIKey(apiKey)), model: model}, nil
 }
 
-// Generate requests JSON-schema-constrained output and returns token usage.
+// Generate 请求受 JSON Schema 约束的输出并返回令牌用量。
 func (m *OpenAIModel) Generate(ctx context.Context, prompt string, schema map[string]any) ([]byte, Usage, error) {
 	response, err := m.client.Responses.New(ctx, responses.ResponseNewParams{Model: responses.ResponsesModel(m.model), Input: responses.ResponseNewParamsInputUnion{OfString: openai.String(prompt)}, Text: responses.ResponseTextConfigParam{Format: responses.ResponseFormatTextConfigParamOfJSONSchema("contract_risk_summary", schema)}})
 	if err != nil {

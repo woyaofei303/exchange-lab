@@ -1,4 +1,4 @@
-// Package identity owns users, opaque sessions, RBAC and security audit facts.
+// Package identity 管理用户、不透明会话、RBAC 和安全审计事实。
 package identity
 
 import (
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Identity errors are deliberately coarse so transport layers do not leak credentials.
+// 身份错误刻意保持粗粒度，避免传输层泄露凭据。
 var (
 	ErrConflict           = errors.New("identity conflict")
 	ErrNotFound           = errors.New("identity not found")
@@ -22,13 +22,13 @@ var (
 
 var emailPattern = regexp.MustCompile(`^[a-z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$`)
 
-// Status is the persisted user-account lifecycle state.
+// Status 表示持久化的用户账户生命周期状态。
 type Status string
 
-// StatusActive is the only state allowed to create or use sessions.
+// StatusActive 是唯一允许创建或使用会话的状态。
 const StatusActive Status = "active"
 
-// User is the persisted identity record; PasswordHash must be cleared at public boundaries.
+// User 是持久化身份记录；在公开边界必须清除 PasswordHash。
 type User struct {
 	ID           int64
 	Email        string
@@ -37,7 +37,7 @@ type User struct {
 	Status       Status
 }
 
-// Session is an opaque-token session; only TokenHash is persisted.
+// Session 是不透明令牌会话；仅持久化 TokenHash。
 type Session struct {
 	TokenHash TokenHash
 	User      User
@@ -46,7 +46,7 @@ type Session struct {
 	RevokedAt time.Time
 }
 
-// AuditEvent is an append-only identity or authorization fact.
+// AuditEvent 是仅追加的身份或授权事实。
 type AuditEvent struct {
 	ID           int64          `json:"id"`
 	ActorUserID  *int64         `json:"actor_user_id,omitempty"`
@@ -57,7 +57,7 @@ type AuditEvent struct {
 	OccurredAt   time.Time      `json:"occurred_at"`
 }
 
-// Store owns atomic user, session and audit persistence operations.
+// Store 负责用户、会话和审计数据的原子持久化操作。
 type Store interface {
 	CreateUser(context.Context, string, string) (User, error)
 	UserByEmail(context.Context, string) (User, error)
@@ -69,7 +69,7 @@ type Store interface {
 	ListAudit(context.Context, int) ([]AuditEvent, error)
 }
 
-// Service enforces password, session expiry and RBAC rules over Store.
+// Service 在 Store 之上执行密码、会话过期和 RBAC 规则。
 type Service struct {
 	store  Store
 	hasher PasswordHasher
@@ -78,7 +78,7 @@ type Service struct {
 	now    func() time.Time
 }
 
-// NewService validates security dependencies and bounds session lifetime.
+// NewService 校验安全依赖并限制会话生命周期。
 func NewService(store Store, hasher PasswordHasher, issuer TokenIssuer, ttl time.Duration, now func() time.Time) (*Service, error) {
 	if store == nil || !hasher.valid() || ttl < time.Minute || ttl > 30*24*time.Hour || now == nil {
 		return nil, fmt.Errorf("create identity service: invalid configuration")
@@ -86,7 +86,7 @@ func NewService(store Store, hasher PasswordHasher, issuer TokenIssuer, ttl time
 	return &Service{store: store, hasher: hasher, issuer: issuer, ttl: ttl, now: now}, nil
 }
 
-// Register normalizes an email, hashes the password and returns a sanitized user.
+// Register 规范化邮箱、哈希密码并返回脱敏用户。
 func (s *Service) Register(ctx context.Context, email, password string) (User, error) {
 	email, err := normalizeEmail(email)
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (User, e
 	return user, nil
 }
 
-// Login verifies credentials and returns the only copy of a new opaque token.
+// Login 校验凭据，并返回新不透明令牌的唯一副本。
 func (s *Service) Login(ctx context.Context, email, password string) (string, Session, error) {
 	email, err := normalizeEmail(email)
 	if err != nil {
@@ -129,7 +129,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, Se
 	return token, session, nil
 }
 
-// Authenticate resolves an active unexpired token without exposing its stored hash.
+// Authenticate 解析有效且未过期的令牌，不暴露其存储哈希。
 func (s *Service) Authenticate(ctx context.Context, token string) (Session, error) {
 	if len(token) < 40 || len(token) > 128 {
 		return Session{}, ErrUnauthenticated
@@ -143,7 +143,7 @@ func (s *Service) Authenticate(ctx context.Context, token string) (Session, erro
 	return session, nil
 }
 
-// Refresh atomically revokes a session and replaces it with fresh opaque credentials.
+// Refresh 原子撤销会话，并用新的不透明凭据替换。
 func (s *Service) Refresh(ctx context.Context, token string) (string, Session, error) {
 	current, err := s.Authenticate(ctx, token)
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *Service) Refresh(ctx context.Context, token string) (string, Session, e
 	return replacementToken, replacement, nil
 }
 
-// Logout is idempotent and revokes an active token when present.
+// Logout 是幂等操作，并在有效令牌存在时将其撤销。
 func (s *Service) Logout(ctx context.Context, token string) error {
 	session, err := s.Authenticate(ctx, token)
 	if err != nil {
@@ -174,7 +174,7 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	return s.audit(ctx, &session.User.ID, "identity.logout", "session", "self", nil)
 }
 
-// AuditLog returns a bounded audit history to administrators only.
+// AuditLog 仅向管理员返回有界的审计历史。
 func (s *Service) AuditLog(ctx context.Context, actor User, limit int) ([]AuditEvent, error) {
 	if !actor.Role.Allows(RoleAdmin) {
 		_ = s.audit(ctx, &actor.ID, "authorization.denied", "audit_log", "list", map[string]any{"required_role": string(RoleAdmin)})

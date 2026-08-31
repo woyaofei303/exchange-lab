@@ -3,30 +3,30 @@ package trading
 import "errors"
 
 var (
-	// ErrInvalidAsset indicates an asset code or ledger scale is invalid.
+	// ErrInvalidAsset 表示资产代码或账本精度无效。
 	ErrInvalidAsset = errors.New("invalid asset")
-	// ErrInvalidScale indicates a decimal scale is outside the supported range.
+	// ErrInvalidScale 表示小数精度超出支持范围。
 	ErrInvalidScale = errors.New("invalid scale")
-	// ErrInvalidNumber indicates a decimal string is not in canonical form.
+	// ErrInvalidNumber 表示十进制字符串不符合规范格式。
 	ErrInvalidNumber = errors.New("invalid decimal number")
-	// ErrPrecisionExceeded indicates a value has more fractional digits than allowed.
+	// ErrPrecisionExceeded 表示数值的小数位数超过允许范围。
 	ErrPrecisionExceeded = errors.New("precision exceeded")
-	// ErrNonPositive indicates a value required to be positive is zero or negative.
+	// ErrNonPositive 表示要求为正数的值实际为零或负数。
 	ErrNonPositive = errors.New("value must be positive")
-	// ErrOverflow indicates an exact fixed-point value does not fit in int64 atoms.
+	// ErrOverflow 表示精确定点值无法用 int64 最小单位表示。
 	ErrOverflow = errors.New("fixed-point overflow")
-	// ErrInvalidSide indicates an unsupported order side.
+	// ErrInvalidSide 表示订单方向不受支持。
 	ErrInvalidSide = errors.New("invalid order side")
-	// ErrInvalidOrderType indicates an unsupported order type.
+	// ErrInvalidOrderType 表示订单类型不受支持。
 	ErrInvalidOrderType = errors.New("invalid order type")
-	// ErrInvalidOrderStatus indicates an unsupported order status.
+	// ErrInvalidOrderStatus 表示订单状态不受支持。
 	ErrInvalidOrderStatus = errors.New("invalid order status")
-	// ErrInvalidInstrument indicates a perpetual contract specification is inconsistent.
+	// ErrInvalidInstrument 表示永续合约规格不一致。
 	ErrInvalidInstrument = errors.New("invalid instrument")
-	// ErrScaleMismatch indicates a value was created at a different scale than its instrument.
+	// ErrScaleMismatch 表示数值精度与所属交易品种的精度不同。
 	ErrScaleMismatch = errors.New("scale mismatch")
-	// ErrStepMismatch indicates a price or quantity is not a multiple of its configured step.
+	// ErrStepMismatch 表示价格或数量不是配置步长的整数倍。
 	ErrStepMismatch = errors.New("step mismatch")
-	// ErrBelowMinimumNotional indicates an order value is below the instrument minimum.
+	// ErrBelowMinimumNotional 表示订单名义价值低于交易品种的最小值。
 	ErrBelowMinimumNotional = errors.New("below minimum notional")
 )

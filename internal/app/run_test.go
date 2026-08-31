@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"exchange-lab/internal/config"
+	"exchange-lab/internal/health"
 	"github.com/nats-io/nats.go"
-	"github.com/woyaofei303/exchange-lab/internal/config"
-	"github.com/woyaofei303/exchange-lab/internal/health"
 )
 
 func TestConnectNATSReturnsPromptlyAndReadinessFailsWhileInitialConnectionRetries(t *testing.T) {

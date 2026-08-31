@@ -1,4 +1,4 @@
-// Package natspublisher adapts NATS Core to bounded domain publication.
+// Package natspublisher 将 NATS Core 适配到有界的领域消息发布。
 package natspublisher
 
 import (
@@ -11,12 +11,12 @@ type connection interface {
 	FlushWithContext(context.Context) error
 }
 
-// CorePublisher publishes ephemeral NATS Core messages with a flush deadline.
+// CorePublisher 发布带刷新截止时间的临时 NATS Core 消息。
 type CorePublisher struct {
 	connection connection
 }
 
-// New validates the NATS connection.
+// New 校验 NATS 连接。
 func New(natsConnection connection) (*CorePublisher, error) {
 	if natsConnection == nil {
 		return nil, fmt.Errorf("create NATS publisher: connection is required")
@@ -24,7 +24,7 @@ func New(natsConnection connection) (*CorePublisher, error) {
 	return &CorePublisher{connection: natsConnection}, nil
 }
 
-// Publish sends one message and waits for a context-bounded flush.
+// Publish 发送一条消息，并等待受上下文限制的刷新完成。
 func (p *CorePublisher) Publish(ctx context.Context, subject string, payload []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err

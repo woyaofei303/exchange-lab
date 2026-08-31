@@ -1,5 +1,4 @@
-// Package fixedmath provides bounded integer arithmetic for financial domain
-// packages. It never converts values through binary floating point.
+// Package fixedmath 为金融领域包提供有界整数运算，绝不通过二进制浮点数转换值。
 package fixedmath
 
 import (
@@ -7,10 +6,10 @@ import (
 	"math/big"
 )
 
-// ErrArithmetic reports invalid divisors, unsupported signs or int64 overflow.
+// ErrArithmetic 表示除数无效、符号不受支持或 int64 溢出。
 var ErrArithmetic = errors.New("fixed arithmetic error")
 
-// MulDiv returns a*b/divisor using an unbounded intermediate and truncation toward zero.
+// MulDiv 使用无限精度中间值计算 a*b/divisor，并向零截断。
 func MulDiv(a, b, divisor int64) (int64, error) {
 	if divisor <= 0 {
 		return 0, ErrArithmetic
@@ -23,7 +22,7 @@ func MulDiv(a, b, divisor int64) (int64, error) {
 	return q.Int64(), nil
 }
 
-// MulDivCeil returns ceil(a*b/divisor) for non-negative financial values.
+// MulDivCeil 对非负金融数值返回 ceil(a*b/divisor)。
 func MulDivCeil(a, b, divisor int64) (int64, error) {
 	if a < 0 || b < 0 || divisor <= 0 {
 		return 0, ErrArithmetic
@@ -41,7 +40,7 @@ func MulDivCeil(a, b, divisor int64) (int64, error) {
 	return q.Int64(), nil
 }
 
-// Pow10 returns 10^scale when it fits in int64.
+// Pow10 在结果可用 int64 表示时返回 10^scale。
 func Pow10(scale uint8) (int64, error) {
 	if scale > 18 {
 		return 0, ErrArithmetic
@@ -56,7 +55,7 @@ func Pow10(scale uint8) (int64, error) {
 	return value, nil
 }
 
-// Abs returns the absolute value and rejects the unrepresentable MinInt64 case.
+// Abs 返回绝对值，并拒绝无法表示的 MinInt64 情况。
 func Abs(value int64) (int64, error) {
 	if value == -1<<63 {
 		return 0, ErrArithmetic

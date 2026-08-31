@@ -1,4 +1,4 @@
-// Command openapicheck validates the local OpenAPI document without remote refs.
+// Command openapicheck 校验不含远程引用的本地 OpenAPI 文档。
 package main
 
 import (

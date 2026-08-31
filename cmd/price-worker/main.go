@@ -1,4 +1,4 @@
-// Command price-worker derives index and mark prices from normalized tickers.
+// Command price-worker 根据规范化行情计算指数价格和标记价格。
 package main
 
 import (
@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"exchange-lab/internal/contractprice"
+	"exchange-lab/internal/observability"
+	"exchange-lab/internal/platform/natspublisher"
+	store "exchange-lab/internal/platform/postgres"
 	"github.com/nats-io/nats.go"
-	"github.com/woyaofei303/exchange-lab/internal/contractprice"
-	"github.com/woyaofei303/exchange-lab/internal/observability"
-	"github.com/woyaofei303/exchange-lab/internal/platform/natspublisher"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
 )
 
 func main() {

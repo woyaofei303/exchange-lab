@@ -9,28 +9,28 @@ import (
 	"math/big"
 	"time"
 
+	"exchange-lab/internal/fixedmath"
+	"exchange-lab/internal/funding"
+	"exchange-lab/internal/liquidation"
+	"exchange-lab/internal/position"
+	"exchange-lab/internal/risk"
+	"exchange-lab/internal/trading"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/woyaofei303/exchange-lab/internal/fixedmath"
-	"github.com/woyaofei303/exchange-lab/internal/funding"
-	"github.com/woyaofei303/exchange-lab/internal/liquidation"
-	"github.com/woyaofei303/exchange-lab/internal/position"
-	"github.com/woyaofei303/exchange-lab/internal/risk"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
-// RiskRepository owns authoritative risk, funding and conditional-order persistence.
+// RiskRepository 管理权威风险、资金费和条件单持久化。
 type RiskRepository struct {
 	pool    *pgxpool.Pool
 	timeout time.Duration
 }
 
-// NewRiskRepository constructs a context-bounded derivatives repository.
+// NewRiskRepository 创建受上下文限制的衍生品仓储。
 func NewRiskRepository(pool *pgxpool.Pool, timeout time.Duration) *RiskRepository {
 	return &RiskRepository{pool: pool, timeout: timeout}
 }
 
-// Snapshot calculates one user's current mark-price margin and liquidation projection.
+// Snapshot 计算一个用户当前基于标记价格的保证金和清算投影。
 func (r *RiskRepository) Snapshot(ctx context.Context, userID int64, symbol string) (risk.Snapshot, error) {
 	if r == nil || r.pool == nil || userID <= 0 || symbol == "" {
 		return risk.Snapshot{}, fmt.Errorf("risk snapshot: invalid input")
@@ -94,7 +94,7 @@ func maxInt64(a, b int64) int64 {
 	return b
 }
 
-// SetLeverage validates the active tier and advances the user's risk version.
+// SetLeverage 校验有效档位并推进用户风险版本。
 func (r *RiskRepository) SetLeverage(ctx context.Context, userID int64, symbol string, leverage int64) error {
 	if userID <= 0 || symbol == "" || leverage < 1 || leverage > 125 {
 		return fmt.Errorf("set leverage: invalid input")
@@ -125,7 +125,7 @@ func (r *RiskRepository) SetLeverage(ctx context.Context, userID int64, symbol s
 	return tx.Commit(op)
 }
 
-// SetMode switches isolated/cross mode and advances the user's risk version.
+// SetMode 切换逐仓/全仓模式并推进用户风险版本。
 func (r *RiskRepository) SetMode(ctx context.Context, userID int64, mode string) error {
 	if userID <= 0 || (mode != "isolated" && mode != "cross") {
 		return fmt.Errorf("set margin mode: invalid input")
@@ -139,7 +139,7 @@ func (r *RiskRepository) SetMode(ctx context.Context, userID int64, mode string)
 	return nil
 }
 
-// AdjustMargin transfers collateral idempotently between balance and position margin.
+// AdjustMargin 在余额和仓位保证金之间幂等转移抵押品。
 func (r *RiskRepository) AdjustMargin(ctx context.Context, userID int64, symbol string, amount int64, key string) (int64, bool, error) {
 	if userID <= 0 || symbol == "" || amount == 0 || len(key) < 8 || len(key) > 128 {
 		return 0, false, fmt.Errorf("adjust margin: invalid input")
@@ -206,7 +206,7 @@ func (r *RiskRepository) AdjustMargin(ctx context.Context, userID int64, symbol 
 	return after, false, nil
 }
 
-// ScanLiquidations creates one idempotent pending job per breached risk version.
+// ScanLiquidations 为每个触发条件的风险版本创建一个幂等待处理任务。
 func (r *RiskRepository) ScanLiquidations(ctx context.Context, at time.Time) (int, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -249,7 +249,7 @@ func (r *RiskRepository) ScanLiquidations(ctx context.Context, at time.Time) (in
 	return created, rows.Err()
 }
 
-// Liquidations returns a bounded user-scoped liquidation history.
+// Liquidations 返回有界且限定到用户范围的清算历史。
 func (r *RiskRepository) Liquidations(ctx context.Context, userID int64) ([]risk.LiquidationRecord, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -269,7 +269,7 @@ func (r *RiskRepository) Liquidations(ctx context.Context, userID int64) ([]risk
 	return result, rows.Err()
 }
 
-// RunFunding settles one symbol/time window exactly once with zero-sum entries.
+// RunFunding 使用零和条目对一个交易对/时间窗口精确结算一次。
 func (r *RiskRepository) RunFunding(ctx context.Context, symbol string, fundingTime time.Time) (int64, int, error) {
 	if symbol == "" || fundingTime.IsZero() {
 		return 0, 0, fmt.Errorf("funding: invalid input")
@@ -391,7 +391,7 @@ func (r *RiskRepository) RunFunding(ctx context.Context, symbol string, fundingT
 	return rateID, len(payments), nil
 }
 
-// FundingHistory returns the latest bounded rate history for a symbol.
+// FundingHistory 返回交易对最新且有界的费率历史。
 func (r *RiskRepository) FundingHistory(ctx context.Context, symbol string) ([]risk.FundingRecord, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -411,7 +411,7 @@ func (r *RiskRepository) FundingHistory(ctx context.Context, symbol string) ([]r
 	return result, rows.Err()
 }
 
-// FundingPayments returns the latest bounded settlements for one user.
+// FundingPayments 返回一个用户最新且有界的结算记录。
 func (r *RiskRepository) FundingPayments(ctx context.Context, userID int64) ([]risk.FundingPayment, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -431,7 +431,7 @@ func (r *RiskRepository) FundingPayments(ctx context.Context, userID int64) ([]r
 	return result, rows.Err()
 }
 
-// CreateConditional stores a reduce-only trigger idempotently.
+// CreateConditional 幂等存储只减仓触发器。
 func (r *RiskRepository) CreateConditional(ctx context.Context, userID int64, item risk.ConditionalOrder, key string) (risk.ConditionalOrder, bool, error) {
 	if userID <= 0 || item.Symbol == "" || (item.Type != "take_profit" && item.Type != "stop_loss") || (item.TriggerSource != "mark" && item.TriggerSource != "last") || (item.TriggerDirection != "lte" && item.TriggerDirection != "gte") || item.TriggerPriceAtoms <= 0 || item.QuantityAtoms <= 0 || len(key) < 8 {
 		return risk.ConditionalOrder{}, false, fmt.Errorf("conditional: invalid input")
@@ -449,7 +449,7 @@ func (r *RiskRepository) CreateConditional(ctx context.Context, userID int64, it
 	return item, replayed, err
 }
 
-// Conditionals returns a bounded user-scoped trigger history.
+// Conditionals 返回有界且限定到用户范围的触发历史。
 func (r *RiskRepository) Conditionals(ctx context.Context, userID int64) ([]risk.ConditionalOrder, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -469,7 +469,7 @@ func (r *RiskRepository) Conditionals(ctx context.Context, userID int64) ([]risk
 	return result, rows.Err()
 }
 
-// Insurance returns the latest fund balance and pending ADL evidence count.
+// Insurance 返回最新基金余额和待处理 ADL 证据数量。
 func (r *RiskRepository) Insurance(ctx context.Context) (risk.InsuranceStatus, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -478,7 +478,7 @@ func (r *RiskRepository) Insurance(ctx context.Context) (risk.InsuranceStatus, e
 	return s, err
 }
 
-// TriggerConditionals creates reduce-only orders for eligible mark-price triggers.
+// TriggerConditionals 为符合条件的标记价格触发器创建只减仓订单。
 func (r *RiskRepository) TriggerConditionals(ctx context.Context, at time.Time) (int, error) {
 	op, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()

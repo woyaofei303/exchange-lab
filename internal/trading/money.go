@@ -5,13 +5,13 @@ import (
 	"math/big"
 )
 
-// Money is an exact signed amount denominated in one Asset.
+// Money 表示以某种资产计价的精确有符号金额。
 type Money struct {
 	asset Asset
 	value fixed
 }
 
-// ParseMoney parses a decimal amount using the asset's authoritative ledger scale.
+// ParseMoney 使用资产的权威账本精度解析十进制金额。
 func ParseMoney(asset Asset, text string) (Money, error) {
 	if asset.Code() == "" {
 		return Money{}, fmt.Errorf("parse money: %w: zero-value asset", ErrInvalidAsset)
@@ -23,29 +23,29 @@ func ParseMoney(asset Asset, text string) (Money, error) {
 	return Money{asset: asset, value: value}, nil
 }
 
-// Asset returns the denomination of this amount.
+// Asset 返回该金额的计价资产。
 func (m Money) Asset() Asset {
 	return m.asset
 }
 
-// Atoms returns the integer source-of-truth amount at Asset().Scale().
+// Atoms 返回按 Asset().Scale() 精度表示的权威整数金额。
 func (m Money) Atoms() int64 {
 	return m.value.atoms
 }
 
-// String returns the exact amount followed by its asset code.
+// String 返回精确金额及其资产代码。
 func (m Money) String() string {
 	return m.value.String() + " " + m.asset.Code()
 }
 
-// Decimal returns the exact decimal amount without its asset suffix.
+// Decimal 返回不带资产后缀的精确十进制金额。
 func (m Money) Decimal() string {
 	return m.value.String()
 }
 
-// CalculateNotional returns price × quantity denominated in quoteAsset. The
-// multiplication uses arbitrary-precision integers internally and fails rather
-// than rounding when the quote asset scale cannot represent the exact result.
+// CalculateNotional 返回以 quoteAsset 计价的价格乘数量。
+// 乘法内部使用任意精度整数；当报价资产精度无法表示精确结果时返回错误，
+// 而不是执行舍入。
 func CalculateNotional(price Price, quantity Quantity, quoteAsset Asset) (Money, error) {
 	if quoteAsset.Code() == "" {
 		return Money{}, fmt.Errorf("calculate notional: %w: zero-value quote asset", ErrInvalidAsset)

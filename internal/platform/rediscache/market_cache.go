@@ -8,21 +8,21 @@ import (
 	"regexp"
 	"time"
 
+	"exchange-lab/internal/market"
+	"exchange-lab/internal/trading"
 	redisclient "github.com/redis/go-redis/v9"
-	"github.com/woyaofei303/exchange-lab/internal/market"
-	"github.com/woyaofei303/exchange-lab/internal/trading"
 )
 
 var cacheSymbolPattern = regexp.MustCompile(`^[A-Z0-9]{4,24}-PERP$`)
 
-// MarketCacheConfig bounds every Redis operation and projection lifetime.
+// MarketCacheConfig 限制每个 Redis 操作和投影的生命周期。
 type MarketCacheConfig struct {
 	OperationTimeout time.Duration
 	InstrumentTTL    time.Duration
 	TickerTTL        time.Duration
 }
 
-// MarketCache stores only rebuildable market read models. Every key has a TTL.
+// MarketCache 仅存储可重建的行情读取模型，每个键都有 TTL。
 type MarketCache struct {
 	client        redisclient.Cmdable
 	timeout       time.Duration
@@ -30,7 +30,7 @@ type MarketCache struct {
 	tickerTTL     time.Duration
 }
 
-// NewMarketCache validates a rebuildable market cache configuration.
+// NewMarketCache 校验可重建的行情缓存配置。
 func NewMarketCache(client redisclient.Cmdable, config MarketCacheConfig) (*MarketCache, error) {
 	if client == nil || config.OperationTimeout <= 0 || config.InstrumentTTL <= 0 || config.TickerTTL <= 0 {
 		return nil, fmt.Errorf("create market cache: invalid configuration")
@@ -56,7 +56,7 @@ type cachedInstrument struct {
 	MinNotionalAtoms  int64  `json:"min_notional_atoms"`
 }
 
-// GetInstruments returns decoded instruments and distinguishes misses from failures.
+// GetInstruments 返回解码后的交易品种，并区分缓存未命中和故障。
 func (c *MarketCache) GetInstruments(ctx context.Context, symbol string) ([]trading.Instrument, bool, error) {
 	key, err := marketKey("instruments", symbol)
 	if err != nil {
@@ -86,7 +86,7 @@ func (c *MarketCache) GetInstruments(ctx context.Context, symbol string) ([]trad
 	return result, true, nil
 }
 
-// PutInstruments stores exact atoms and scale with a finite TTL.
+// PutInstruments 使用有限 TTL 存储精确最小单位值和精度。
 func (c *MarketCache) PutInstruments(ctx context.Context, symbol string, instruments []trading.Instrument) error {
 	key, err := marketKey("instruments", symbol)
 	if err != nil {
@@ -122,7 +122,7 @@ func (c *MarketCache) PutInstruments(ctx context.Context, symbol string, instrum
 	return nil
 }
 
-// InvalidateInstruments deletes one symbol or all-instruments projection.
+// InvalidateInstruments 删除一个交易对或全部交易品种投影。
 func (c *MarketCache) InvalidateInstruments(ctx context.Context, symbol string) error {
 	key, err := marketKey("instruments", symbol)
 	if err != nil {
@@ -131,7 +131,7 @@ func (c *MarketCache) InvalidateInstruments(ctx context.Context, symbol string) 
 	return c.delete(ctx, key, "invalidate instrument cache")
 }
 
-// GetTickers returns ticker projections and distinguishes misses from failures.
+// GetTickers 返回行情投影，并区分缓存未命中和故障。
 func (c *MarketCache) GetTickers(ctx context.Context, symbol string) ([]market.Ticker, bool, error) {
 	key, err := marketKey("tickers", symbol)
 	if err != nil {
@@ -153,7 +153,7 @@ func (c *MarketCache) GetTickers(ctx context.Context, symbol string) ([]market.T
 	return result, true, nil
 }
 
-// PutTickers stores a rebuildable ticker projection with a finite TTL.
+// PutTickers 使用有限 TTL 存储可重建的行情投影。
 func (c *MarketCache) PutTickers(ctx context.Context, symbol string, tickers []market.Ticker) error {
 	key, err := marketKey("tickers", symbol)
 	if err != nil {
@@ -171,7 +171,7 @@ func (c *MarketCache) PutTickers(ctx context.Context, symbol string, tickers []m
 	return nil
 }
 
-// PutTicker adapts MarketCache to the market-data worker's narrow latest-ticker sink.
+// PutTicker 将 MarketCache 适配到行情工作进程的窄化最新行情接收接口。
 func (c *MarketCache) PutTicker(ctx context.Context, ticker market.Ticker) error {
 	if ticker.Symbol == "" {
 		return fmt.Errorf("write ticker cache: invalid ticker")
@@ -182,7 +182,7 @@ func (c *MarketCache) PutTicker(ctx context.Context, ticker market.Ticker) error
 	return c.PutTickers(ctx, "", []market.Ticker{ticker})
 }
 
-// InvalidateTickers deletes one symbol or all-tickers projection.
+// InvalidateTickers 删除一个交易对或全部行情投影。
 func (c *MarketCache) InvalidateTickers(ctx context.Context, symbol string) error {
 	key, err := marketKey("tickers", symbol)
 	if err != nil {

@@ -1,5 +1,5 @@
 -- +goose Up
--- Adds versioned cross-margin risk snapshots for shared collateral evidence.
+-- 添加带版本的全仓风险快照，作为共享抵押品证据。
 CREATE TABLE cross_risk_snapshots (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,

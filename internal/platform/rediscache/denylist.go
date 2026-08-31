@@ -9,14 +9,14 @@ import (
 	redisclient "github.com/redis/go-redis/v9"
 )
 
-// TokenDenylist stores hashed revocations with bounded lifetimes.
+// TokenDenylist 存储生命周期受限的撤销令牌哈希。
 type TokenDenylist struct {
 	client  redisclient.Cmdable
 	timeout time.Duration
 	maxTTL  time.Duration
 }
 
-// NewTokenDenylist validates Redis access and maximum revocation lifetime.
+// NewTokenDenylist 校验 Redis 访问和最大撤销生命周期。
 func NewTokenDenylist(client redisclient.Cmdable, timeout, maxTTL time.Duration) (*TokenDenylist, error) {
 	if client == nil || timeout <= 0 || maxTTL <= 0 {
 		return nil, fmt.Errorf("create token denylist: invalid configuration")
@@ -24,8 +24,8 @@ func NewTokenDenylist(client redisclient.Cmdable, timeout, maxTTL time.Duration)
 	return &TokenDenylist{client: client, timeout: timeout, maxTTL: maxTTL}, nil
 }
 
-// Deny stores only a hash of tokenID and expires it with the token. A failure
-// is returned so callers do not pretend revocation succeeded.
+// Deny 仅存储 tokenID 的哈希，并使其随令牌一起过期。
+// 失败时返回错误，防止调用方误认为撤销成功。
 func (d *TokenDenylist) Deny(ctx context.Context, tokenID string, expiresAt time.Time) error {
 	key, err := privateKey("security:denylist", tokenID)
 	if err != nil {
@@ -43,8 +43,7 @@ func (d *TokenDenylist) Deny(ctx context.Context, tokenID string, expiresAt time
 	return nil
 }
 
-// IsDenied returns Redis errors so authentication can fail closed when
-// revocation state is unavailable.
+// IsDenied 返回 Redis 错误，使身份验证在撤销状态不可用时能够失败关闭。
 func (d *TokenDenylist) IsDenied(ctx context.Context, tokenID string) (bool, error) {
 	key, err := privateKey("security:denylist", tokenID)
 	if err != nil {

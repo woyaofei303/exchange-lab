@@ -8,11 +8,11 @@ import (
 
 type postgresChecker struct{ pool *pgxpool.Pool }
 
-// NewPostgresChecker adapts a context-aware PostgreSQL pool ping.
+// NewPostgresChecker 适配支持上下文的 PostgreSQL 连接池探测。
 func NewPostgresChecker(pool *pgxpool.Pool) Checker { return postgresChecker{pool: pool} }
 
-// Name returns the stable readiness dependency key.
+// Name 返回稳定的就绪检查依赖键。
 func (postgresChecker) Name() string { return "postgres" }
 
-// Check performs one context-bounded PostgreSQL ping.
+// Check 执行一次受上下文限制的 PostgreSQL 探测。
 func (c postgresChecker) Check(ctx context.Context) error { return c.pool.Ping(ctx) }

@@ -1,12 +1,12 @@
-// Command risk-worker evaluates liquidations and conditional orders.
+// Command risk-worker 评估清算和条件单。
 package main
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/woyaofei303/exchange-lab/internal/observability"
-	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
+	"exchange-lab/internal/observability"
+	store "exchange-lab/internal/platform/postgres"
 	"log/slog"
 	"net/http"
 	"os"
