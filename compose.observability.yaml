@@ -1,0 +1,33 @@
+services:
+  api:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+    depends_on:
+      otel-collector: {condition: service_started}
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    command: [--config.file=/etc/prometheus/prometheus.yml]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [exchange]
+  grafana:
+    image: grafana/grafana:12.2.1
+    environment: {GF_SECURITY_ADMIN_PASSWORD: exchange_dev_only}
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [prometheus, tempo]
+    networks: [exchange]
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.138.0
+    command: [--config=/etc/otel/config.yaml]
+    volumes: ["./observability/otel-collector.yaml:/etc/otel/config.yaml:ro"]
+    networks: [exchange]
+  tempo:
+    image: grafana/tempo:2.9.0
+    command: [-config.file=/etc/tempo.yaml]
+    volumes: ["./observability/tempo.yaml:/etc/tempo.yaml:ro"]
+    networks: [exchange]

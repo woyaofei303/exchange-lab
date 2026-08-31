@@ -1,0 +1,968 @@
+openapi: 3.0.3
+info:
+  title: Exchange Lab API
+  version: 1.0.0
+  description: API for a simulated USDT-margined perpetual futures lab. No real funds are connected.
+servers:
+  - url: http://127.0.0.1:8080
+tags:
+  - name: Health
+  - name: Market Data
+  - name: Identity
+  - name: Ledger
+  - name: Orders
+  - name: Risk
+  - name: AI
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Check API process liveness
+      responses:
+        '200':
+          description: API process is alive
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+              example:
+                status: ok
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+  /readyz:
+    get:
+      operationId: getReadiness
+      tags: [Health]
+      summary: Check PostgreSQL, Redis and NATS readiness
+      responses:
+        '200':
+          description: Every required dependency is ready
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: One or more required dependencies are unavailable
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+  /v1/instruments:
+    get:
+      operationId: listInstruments
+      tags: [Market Data]
+      summary: List perpetual contract filters
+      parameters:
+        - $ref: '#/components/parameters/SymbolFilter'
+      responses:
+        '200':
+          description: Matching perpetual contracts
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstrumentsResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '408':
+          $ref: '#/components/responses/RequestCanceled'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '504':
+          $ref: '#/components/responses/RequestTimeout'
+  /v1/tickers:
+    get:
+      operationId: listTickers
+      tags: [Market Data]
+      summary: List read-only perpetual ticker snapshots
+      parameters:
+        - $ref: '#/components/parameters/SymbolFilter'
+      responses:
+        '200':
+          description: Matching ticker snapshots
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TickersResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '408':
+          $ref: '#/components/responses/RequestCanceled'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '504':
+          $ref: '#/components/responses/RequestTimeout'
+  /v1/candles:
+    get:
+      operationId: listCandles
+      tags: [Market Data]
+      summary: List persisted perpetual candle history
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+        - $ref: '#/components/parameters/CandleInterval'
+        - name: start
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: end
+          in: query
+          required: true
+          schema: {type: string, format: date-time}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 1000, default: 100}
+      responses:
+        '200':
+          description: Time-ordered candle history
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CandlesResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+        '408': {$ref: '#/components/responses/RequestCanceled'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '504': {$ref: '#/components/responses/RequestTimeout'}
+  /ws/v1/candles:
+    get:
+      operationId: streamCandles
+      tags: [Market Data]
+      summary: Upgrade to a real-time candle WebSocket
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+        - $ref: '#/components/parameters/CandleInterval'
+      responses:
+        '101':
+          description: WebSocket upgrade; messages use CandleUpdate
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/auth/register:
+    post:
+      operationId: registerUser
+      tags: [Identity]
+      summary: Register a simulated exchange user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credentials'}
+      responses:
+        '201':
+          description: User registered
+          content: {application/json: {schema: {$ref: '#/components/schemas/UserResponse'}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/auth/login:
+    post:
+      operationId: loginUser
+      tags: [Identity]
+      summary: Create an opaque server-side session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credentials'}
+      responses:
+        '200':
+          description: Login succeeded and an HttpOnly SameSite session cookie was set
+          headers:
+            Set-Cookie: {schema: {type: string}}
+          content: {application/json: {schema: {$ref: '#/components/schemas/UserResponse'}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/SecurityUnavailable'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [Identity]
+      security: [{sessionCookie: []}]
+      summary: Atomically rotate an active session
+      responses:
+        '200':
+          description: Session rotated
+          content: {application/json: {schema: {$ref: '#/components/schemas/UserResponse'}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [Identity]
+      security: [{sessionCookie: []}]
+      summary: Revoke the active session and clear its cookie
+      responses:
+        '200': {description: Session revoked, content: {application/json: {schema: {$ref: '#/components/schemas/StatusResponse'}}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Identity]
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Current user, content: {application/json: {schema: {$ref: '#/components/schemas/UserResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/admin/audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [Identity]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 100}
+      responses:
+        '200': {description: Recent audit events, content: {application/json: {schema: {$ref: '#/components/schemas/AuditResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/faucet:
+    post:
+      operationId: creditSimulatedFunds
+      tags: [Ledger]
+      security: [{sessionCookie: []}]
+      summary: Credit simulated USDT through an idempotent double-entry transaction
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FaucetRequest'}
+      responses:
+        '200': {description: Credit committed or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/FaucetResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/balances:
+    get:
+      operationId: listBalances
+      tags: [Ledger]
+      security: [{sessionCookie: []}]
+      summary: Read the authenticated user's materialized balances
+      responses:
+        '200': {description: Exact decimal balances, content: {application/json: {schema: {$ref: '#/components/schemas/BalancesResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/orders:
+    get:
+      operationId: listOrders
+      tags: [Orders]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 200, default: 100}
+      responses:
+        '200': {description: Authenticated user's orders, content: {application/json: {schema: {$ref: '#/components/schemas/OrdersResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+    post:
+      operationId: placeOrder
+      tags: [Orders]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PlaceOrderRequest'}
+      responses:
+        '200': {description: Order and margin reserve committed atomically, content: {application/json: {schema: {$ref: '#/components/schemas/OrderResultResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/orders/{order_id}/cancel:
+    post:
+      operationId: cancelOrder
+      tags: [Orders]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+      responses:
+        '200': {description: Cancellation and remaining margin release committed atomically, content: {application/json: {schema: {$ref: '#/components/schemas/OrderResultResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Order not found, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/prices:
+    get:
+      operationId: getContractRiskPrice
+      tags: [Risk]
+      summary: Read the latest quality-checked index and mark price
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+      responses:
+        '200': {description: Exact contract risk price, content: {application/json: {schema: {$ref: '#/components/schemas/PriceResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '503': {description: A trustworthy risk price is unavailable, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/positions:
+    get:
+      operationId: listPositions
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Authenticated user's positions, content: {application/json: {schema: {$ref: '#/components/schemas/PositionsResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/risk:
+    get:
+      operationId: getRiskSnapshot
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+      responses:
+        '200': {description: Current margin and liquidation-risk snapshot, content: {application/json: {schema: {$ref: '#/components/schemas/RiskResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/leverage:
+    post:
+      operationId: setLeverage
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SetLeverageRequest'}}}}
+      responses:
+        '200': {description: Leverage updated, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/margin-mode:
+    post:
+      operationId: setMarginMode
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/SetMarginModeRequest'}}}}
+      responses:
+        '200': {description: Margin mode updated, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/margin/adjust:
+    post:
+      operationId: adjustIsolatedMargin
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AdjustMarginRequest'}}}}
+      responses:
+        '200': {description: Margin adjusted or safely replayed, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/liquidations:
+    get:
+      operationId: listLiquidations
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Authenticated user's liquidation records, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/funding-rates:
+    get:
+      operationId: listFundingRates
+      tags: [Risk]
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+      responses:
+        '200': {description: Funding rate history, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/funding-payments:
+    get:
+      operationId: listFundingPayments
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Authenticated user's funding settlements, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/insurance-fund:
+    get:
+      operationId: getInsuranceFund
+      tags: [Risk]
+      responses:
+        '200': {description: Simulated insurance fund status, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/conditional-orders:
+    get:
+      operationId: listConditionalOrders
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Authenticated user's conditional orders, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+    post:
+      operationId: createConditionalOrder
+      tags: [Risk]
+      security: [{sessionCookie: []}]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 8, maxLength: 128}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateConditionalRequest'}}}}
+      responses:
+        '200': {description: Conditional order created or replayed, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+  /v1/ai/contract-risk-summary:
+    get:
+      operationId: getAIContractRiskSummary
+      tags: [AI]
+      security: [{sessionCookie: []}]
+      summary: Generate a read-only evidence-bound risk explanation
+      parameters:
+        - $ref: '#/components/parameters/RequiredSymbol'
+      responses:
+        '200': {description: Structured summary or SSE when requested, content: {application/json: {schema: {$ref: '#/components/schemas/GenericDataResponse'}}, text/event-stream: {schema: {type: string}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthenticated'}
+        '503': {description: AI provider or evidence path unavailable, content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}}
+        '405': {$ref: '#/components/responses/MethodNotAllowed'}
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: exchange_session
+  headers:
+    RequestID:
+      description: Correlation identifier used in structured request logs
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'
+  parameters:
+    SymbolFilter:
+      name: symbol
+      in: query
+      required: false
+      description: Exact canonical perpetual symbol
+      schema:
+        type: string
+        pattern: '^[A-Z0-9]{4,24}-PERP$'
+      example: BTCUSDT-PERP
+    RequiredSymbol:
+      name: symbol
+      in: query
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Z0-9]{4,24}-PERP$'
+      example: BTCUSDT-PERP
+    CandleInterval:
+      name: interval
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [1m, 5m, 1h]
+  responses:
+    InvalidRequest:
+      description: Query input is invalid
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: invalid_request
+              message: invalid request
+              request_id: client-123
+    MethodNotAllowed:
+      description: HTTP method is not supported by this endpoint
+      headers:
+        Allow:
+          required: true
+          schema:
+            type: string
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RequestCanceled:
+      description: Request context was canceled before completion
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Internal failure with sanitized details
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RequestTimeout:
+      description: Configured request deadline expired
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthenticated:
+      description: A valid active session is required
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Forbidden:
+      description: The authenticated role is not authorized
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Conflict:
+      description: The resource already exists
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    RateLimited:
+      description: Login attempt limit exceeded
+      headers:
+        Retry-After: {schema: {type: integer, minimum: 1}}
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    SecurityUnavailable:
+      description: Security state is unavailable and authentication fails closed
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  schemas:
+    StatusResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    ReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ok, error]
+    Instrument:
+      type: object
+      additionalProperties: false
+      required:
+        - symbol
+        - base_asset
+        - quote_asset
+        - price_scale
+        - quantity_scale
+        - price_step
+        - quantity_step
+        - min_notional
+      properties:
+        symbol:
+          type: string
+          pattern: '^[A-Z0-9]{4,24}-PERP$'
+        base_asset:
+          type: string
+          pattern: '^[A-Z0-9]{2,12}$'
+        quote_asset:
+          type: string
+          pattern: '^[A-Z0-9]{2,12}$'
+        price_scale:
+          type: integer
+          minimum: 0
+          maximum: 18
+        quantity_scale:
+          type: integer
+          minimum: 0
+          maximum: 18
+        price_step:
+          $ref: '#/components/schemas/PositiveDecimal'
+        quantity_step:
+          $ref: '#/components/schemas/PositiveDecimal'
+        min_notional:
+          $ref: '#/components/schemas/PositiveDecimal'
+    Ticker:
+      type: object
+      additionalProperties: false
+      required:
+        - symbol
+        - last_price
+        - mark_price
+        - index_price
+        - price_change_24h
+        - volume_24h
+        - updated_at
+      properties:
+        symbol:
+          type: string
+          pattern: '^[A-Z0-9]{4,24}-PERP$'
+        last_price:
+          $ref: '#/components/schemas/PositiveDecimal'
+        mark_price:
+          $ref: '#/components/schemas/PositiveDecimal'
+        index_price:
+          $ref: '#/components/schemas/PositiveDecimal'
+        price_change_24h:
+          $ref: '#/components/schemas/SignedDecimal'
+        volume_24h:
+          $ref: '#/components/schemas/NonNegativeDecimal'
+        updated_at:
+          type: string
+          format: date-time
+    InstrumentsResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instrument'
+    TickersResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticker'
+    Candle:
+      type: object
+      additionalProperties: false
+      required: [symbol, interval, open_time, close_time, open, high, low, close, volume, trade_count, is_final]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        interval: {type: string, enum: [1m, 5m, 1h]}
+        open_time: {type: string, format: date-time}
+        close_time: {type: string, format: date-time}
+        open: {$ref: '#/components/schemas/PositiveDecimal'}
+        high: {$ref: '#/components/schemas/PositiveDecimal'}
+        low: {$ref: '#/components/schemas/PositiveDecimal'}
+        close: {$ref: '#/components/schemas/PositiveDecimal'}
+        volume: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        trade_count: {type: integer, format: int64, minimum: 0}
+        is_final: {type: boolean}
+    CandlesResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Candle'}
+    CandleUpdate:
+      type: object
+      additionalProperties: false
+      required: [version, type, data]
+      properties:
+        version: {type: integer, enum: [1]}
+        type: {type: string, enum: [candle]}
+        data: {$ref: '#/components/schemas/Candle'}
+    Credentials:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: {type: string, format: email, maxLength: 320}
+        password: {type: string, minLength: 12, maxLength: 1024, format: password}
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, role]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        email: {type: string, format: email}
+        role: {type: string, enum: [user, admin]}
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/User'}
+    AuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, action, resource_type, resource_id, metadata, occurred_at]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        actor_user_id: {type: integer, format: int64, minimum: 1}
+        action: {type: string}
+        resource_type: {type: string}
+        resource_id: {type: string}
+        metadata: {type: object, additionalProperties: true}
+        occurred_at: {type: string, format: date-time}
+    AuditResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/AuditEvent'}}
+    FaucetRequest:
+      type: object
+      additionalProperties: false
+      required: [amount]
+      properties:
+        amount: {$ref: '#/components/schemas/PositiveDecimal'}
+    Balance:
+      type: object
+      additionalProperties: false
+      required: [asset, available, locked, total]
+      properties:
+        asset: {type: string, enum: [USDT]}
+        available: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        locked: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        total: {$ref: '#/components/schemas/NonNegativeDecimal'}
+    FaucetResponse:
+      type: object
+      additionalProperties: false
+      required: [transaction_id, replayed, balance]
+      properties:
+        transaction_id: {type: string, pattern: '^ltx_[a-f0-9]{32}$'}
+        replayed: {type: boolean}
+        balance: {$ref: '#/components/schemas/Balance'}
+    BalancesResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Balance'}}
+    PlaceOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [symbol, side, type, price, quantity, leverage, client_order_id]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        side: {type: string, enum: [buy, sell]}
+        type: {type: string, enum: [limit]}
+        price: {$ref: '#/components/schemas/PositiveDecimal'}
+        quantity: {$ref: '#/components/schemas/PositiveDecimal'}
+        leverage: {type: integer, format: int64, minimum: 1, maximum: 125}
+        client_order_id: {type: string, minLength: 8, maxLength: 128}
+    Order:
+      type: object
+      additionalProperties: false
+      required: [id, client_order_id, symbol, side, type, status, price, quantity, remaining, leverage, reserved_margin, created_at, updated_at]
+      properties:
+        id: {type: string}
+        client_order_id: {type: string}
+        symbol: {type: string}
+        side: {type: string, enum: [buy, sell]}
+        type: {type: string, enum: [limit, market]}
+        status: {type: string, enum: [pending, open, partially_filled, filled, canceled, rejected]}
+        price: {$ref: '#/components/schemas/PositiveDecimal'}
+        quantity: {$ref: '#/components/schemas/PositiveDecimal'}
+        remaining: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        leverage: {type: integer, format: int64, minimum: 1, maximum: 125}
+        reserved_margin: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    OrderResultResponse:
+      type: object
+      additionalProperties: false
+      required: [data, replayed]
+      properties:
+        data: {$ref: '#/components/schemas/Order'}
+        replayed: {type: boolean}
+    OrdersResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Order'}}
+    PriceResponse:
+      type: object
+      additionalProperties: false
+      required: [symbol, index_price, mark_price, premium_bps, included_sources, excluded_sources, fresh, as_of]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        index_price: {$ref: '#/components/schemas/PositiveDecimal'}
+        mark_price: {$ref: '#/components/schemas/PositiveDecimal'}
+        premium_bps: {type: integer, format: int64}
+        included_sources: {type: array, items: {type: string}}
+        excluded_sources: {type: array, items: {type: string}}
+        fresh: {type: boolean}
+        as_of: {type: string, format: date-time}
+    Position:
+      type: object
+      additionalProperties: false
+      required: [symbol, size, entry_price, mark_price, realized_pnl, unrealized_pnl, fees, version, updated_at]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        size: {$ref: '#/components/schemas/SignedDecimal'}
+        entry_price: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        mark_price: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        realized_pnl: {$ref: '#/components/schemas/SignedDecimal'}
+        unrealized_pnl: {$ref: '#/components/schemas/SignedDecimal'}
+        fees: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        version: {type: integer, format: int64, minimum: 1}
+        updated_at: {type: string, format: date-time}
+    PositionsResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Position'}}
+    RiskSnapshot:
+      type: object
+      additionalProperties: false
+      required: [symbol, mode, leverage, position_size, entry_price, mark_price, position_margin, order_margin, wallet_available, unrealized_pnl, margin_balance, maintenance_margin, margin_ratio_bps, liquidation_distance_bps, risk_version, fresh, as_of]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        mode: {type: string, enum: [isolated, cross]}
+        leverage: {type: integer, format: int64, minimum: 1, maximum: 125}
+        position_size: {$ref: '#/components/schemas/SignedDecimal'}
+        entry_price: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        mark_price: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        position_margin: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        order_margin: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        wallet_available: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        unrealized_pnl: {$ref: '#/components/schemas/SignedDecimal'}
+        margin_balance: {$ref: '#/components/schemas/SignedDecimal'}
+        maintenance_margin: {$ref: '#/components/schemas/NonNegativeDecimal'}
+        margin_ratio_bps: {type: integer, format: int64, minimum: 0}
+        liquidation_distance_bps: {type: integer, format: int64, minimum: 0}
+        risk_version: {type: integer, format: int64, minimum: 1}
+        fresh: {type: boolean}
+        as_of: {type: string, format: date-time}
+    RiskResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: {$ref: '#/components/schemas/RiskSnapshot'}
+    SetLeverageRequest:
+      type: object
+      additionalProperties: false
+      required: [symbol, leverage]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        leverage: {type: integer, format: int64, minimum: 1, maximum: 125}
+    SetMarginModeRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: {type: string, enum: [isolated, cross]}
+    AdjustMarginRequest:
+      type: object
+      additionalProperties: false
+      required: [symbol, amount]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        amount: {$ref: '#/components/schemas/SignedDecimal'}
+    CreateConditionalRequest:
+      type: object
+      additionalProperties: false
+      required: [symbol, type, trigger_source, trigger_direction, trigger_price, quantity]
+      properties:
+        symbol: {type: string, pattern: '^[A-Z0-9]{4,24}-PERP$'}
+        type: {type: string, enum: [take_profit, stop_loss]}
+        trigger_source: {type: string, enum: [mark, last]}
+        trigger_direction: {type: string, enum: [gte, lte]}
+        trigger_price: {$ref: '#/components/schemas/PositiveDecimal'}
+        quantity: {$ref: '#/components/schemas/PositiveDecimal'}
+    GenericDataResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+              enum:
+                - invalid_request
+                - method_not_allowed
+                - not_found
+                - request_canceled
+                - internal_error
+                - request_timeout
+                - unauthenticated
+                - forbidden
+                - conflict
+                - idempotency_conflict
+                - insufficient_balance
+                - rate_limited
+                - security_state_unavailable
+                - price_unavailable
+                - ai_unavailable
+            message:
+              type: string
+            request_id:
+              type: string
+              pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'
+    PositiveDecimal:
+      type: string
+      pattern: '^(0*[1-9][0-9]*)(\.[0-9]+)?$|^0+\.0*[1-9][0-9]*$'
+    NonNegativeDecimal:
+      type: string
+      pattern: '^(0|[1-9][0-9]*)(\.[0-9]+)?$'
+    SignedDecimal:
+      type: string
+      pattern: '^-?(0|[1-9][0-9]*)(\.[0-9]+)?$'

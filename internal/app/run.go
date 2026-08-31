@@ -1,3 +1,4 @@
+// Package app assembles API dependencies and coordinates graceful lifecycle.
 package app
 
 import (
@@ -6,14 +7,24 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
+	contractai "github.com/woyaofei303/exchange-lab/internal/ai"
+	"github.com/woyaofei303/exchange-lab/internal/candle"
 	"github.com/woyaofei303/exchange-lab/internal/config"
 	"github.com/woyaofei303/exchange-lab/internal/health"
 	"github.com/woyaofei303/exchange-lab/internal/httpserver"
+	"github.com/woyaofei303/exchange-lab/internal/identity"
+	"github.com/woyaofei303/exchange-lab/internal/market"
+	"github.com/woyaofei303/exchange-lab/internal/observability"
+	domainorder "github.com/woyaofei303/exchange-lab/internal/order"
+	store "github.com/woyaofei303/exchange-lab/internal/platform/postgres"
+	"github.com/woyaofei303/exchange-lab/internal/platform/rediscache"
+	"github.com/woyaofei303/exchange-lab/internal/realtime"
+	"github.com/woyaofei303/exchange-lab/migrations"
 )
 
 const (
@@ -21,14 +32,24 @@ const (
 	natsReconnectWait  = 500 * time.Millisecond
 )
 
+// Run assembles and serves the API until cancellation or a process-level failure.
 func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) (runErr error) {
+	traceShutdown, err := observability.SetupTracing(ctx, "exchange-api", os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = traceShutdown(context.Background()) }()
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return errors.New("listen http server")
 	}
 	defer listener.Close()
 
-	pool, err := pgxpool.New(ctx, cfg.PostgresDSN)
+	pool, err := store.OpenPool(ctx, cfg.PostgresDSN, store.PoolConfig{
+		MinConns:       cfg.PostgresMinConns,
+		MaxConns:       cfg.PostgresMaxConns,
+		ConnectTimeout: cfg.DatabaseTimeout,
+	})
 	if err != nil {
 		return errors.New("create postgres client")
 	}
@@ -51,13 +72,93 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) (runErr er
 	}
 
 	readiness := health.NewService(cfg.DependencyTimeout,
-		health.NewPostgresChecker(pool),
+		store.NewSchemaChecker(pool, migrations.CurrentVersion),
 		health.NewRedisChecker(redisClient),
 		health.NewNATSChecker(natsConnection, jetStream),
 	)
+	instruments := store.NewInstrumentRepository(pool, cfg.DatabaseTimeout)
+	authoritativeMarkets, err := market.NewCompositeReader(instruments, defaultTickerReader(time.Now().UTC()))
+	if err != nil {
+		return errors.New("create market reader")
+	}
+	marketCache, err := rediscache.NewMarketCache(redisClient, rediscache.MarketCacheConfig{
+		OperationTimeout: cfg.CacheTimeout,
+		InstrumentTTL:    cfg.InstrumentCacheTTL,
+		TickerTTL:        cfg.TickerCacheTTL,
+	})
+	if err != nil {
+		return errors.New("create market cache")
+	}
+	markets, err := market.NewCachedReader(authoritativeMarkets, marketCache, logger)
+	if err != nil {
+		return errors.New("create cached market reader")
+	}
+	candles := store.NewCandleRepository(pool, cfg.DatabaseTimeout)
+	identityRepository := store.NewIdentityRepository(pool, cfg.DatabaseTimeout)
+	identityService, err := identity.NewService(identityRepository, identity.DefaultPasswordHasher(), identity.TokenIssuer{}, cfg.AuthSessionTTL, time.Now)
+	if err != nil {
+		return errors.New("create identity service")
+	}
+	loginLimiter, err := rediscache.NewLoginRateLimiter(redisClient, cfg.CacheTimeout, cfg.LoginRateLimit, cfg.LoginRateWindow)
+	if err != nil {
+		return errors.New("create login limiter")
+	}
+	ledgerRepository := store.NewLedgerRepository(pool, cfg.DatabaseTimeout)
+	orderRepository := store.NewOrderRepository(pool, cfg.DatabaseTimeout)
+	priceRepository := store.NewPriceRepository(pool, cfg.DatabaseTimeout)
+	positionRepository := store.NewPositionRepository(pool, cfg.DatabaseTimeout)
+	riskRepository := store.NewRiskRepository(pool, cfg.DatabaseTimeout)
+	aiAuditRepository := store.NewAIRepository(pool, cfg.DatabaseTimeout)
+	var riskModel contractai.Model = contractai.DeterministicModel{}
+	aiModelName := "deterministic-local"
+	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
+		aiModelName = os.Getenv("OPENAI_MODEL")
+		if aiModelName == "" {
+			aiModelName = "gpt-5-mini"
+		}
+		openAIModel, modelErr := contractai.NewOpenAIModel(apiKey, aiModelName)
+		if modelErr != nil {
+			return errors.New("create AI model")
+		}
+		riskModel = openAIModel
+	}
+	aiService, err := contractai.NewService(riskRepository, riskModel, aiAuditRepository, aiModelName, "contract-risk-v1", time.Now)
+	if err != nil {
+		return errors.New("create AI risk service")
+	}
+	metrics := observability.New("api")
+	orderService, err := domainorder.NewService(instruments, orderRepository, time.Now)
+	if err != nil {
+		return errors.New("create order service")
+	}
+	candleHub, err := realtime.NewHub(64)
+	if err != nil {
+		return errors.New("create candle stream hub")
+	}
+	candleSubscription, err := natsConnection.Subscribe("candles.>", func(message *nats.Msg) {
+		update, decodeErr := candle.DecodeUpdate(message.Data)
+		if decodeErr != nil {
+			return
+		}
+		subject, subjectErr := candle.UpdateSubject(update)
+		if subjectErr == nil && subject == message.Subject {
+			candleHub.Publish(message.Data)
+		}
+	})
+	if err != nil {
+		return errors.New("subscribe candle updates")
+	}
+	defer candleSubscription.Unsubscribe()
 	server := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           httpserver.NewHandler(readiness, logger),
+		Addr: cfg.HTTPAddr,
+		Handler: httpserver.NewHandlerWithFeatures(readiness, markets, httpserver.Features{
+			Candles: candles, CandleHub: candleHub, Identity: identityService, LoginLimiter: loginLimiter,
+			AuthCookieSecure: cfg.AuthCookieSecure, AuthSessionTTL: cfg.AuthSessionTTL, Ledger: ledgerRepository, Orders: orderService,
+			Prices:    priceRepository,
+			Positions: positionRepository, Derivatives: riskRepository,
+			AI:      aiService,
+			Metrics: metrics,
+		}, logger, cfg.RequestTimeout),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -65,6 +166,21 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) (runErr er
 	}
 
 	return serve(ctx, server, listener, cfg.ShutdownTimeout)
+}
+
+func defaultTickerReader(updatedAt time.Time) market.TickerReader {
+	return market.NewStaticReader(
+		nil,
+		[]market.Ticker{{
+			Symbol:      "BTCUSDT-PERP",
+			LastPrice:   "50000.00",
+			MarkPrice:   "50000.00",
+			IndexPrice:  "50000.00",
+			PriceChange: "0.00",
+			Volume:      "0.000",
+			UpdatedAt:   updatedAt,
+		}},
+	)
 }
 
 func connectNATS(natsURL string) (*nats.Conn, error) {

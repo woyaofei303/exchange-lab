@@ -108,6 +108,18 @@ func TestRunReturnsSanitizedBindErrorBeforeInitializingDependencies(t *testing.T
 	}
 }
 
+func TestDefaultTickerReaderProvidesBTCUSDTTicker(t *testing.T) {
+	updatedAt := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
+	reader := defaultTickerReader(updatedAt)
+	tickers, err := reader.Tickers(context.Background(), "")
+	if err != nil {
+		t.Fatalf("Tickers() error = %v", err)
+	}
+	if got, want := len(tickers), 1; got != want || tickers[0].Symbol != "BTCUSDT-PERP" || !tickers[0].UpdatedAt.Equal(updatedAt) {
+		t.Fatalf("tickers = %#v", tickers)
+	}
+}
+
 func TestServeDrainsActiveRequestAfterCancellation(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

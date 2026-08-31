@@ -1,0 +1,6 @@
+apiVersion: 1
+providers:
+  - name: exchange-lab
+    folder: Exchange Lab
+    type: file
+    options: {path: /var/lib/grafana/dashboards}

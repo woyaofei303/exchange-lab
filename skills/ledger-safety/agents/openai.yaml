@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ledger Safety"
+  short_description: "Protect exchange money invariants and auditability"
+  default_prompt: "Implement or review this exchange money change using exact atoms, double-entry conservation, idempotency, atomic persistence, reconciliation, and failure tests."

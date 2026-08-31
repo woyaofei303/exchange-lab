@@ -1,0 +1,48 @@
+name: deploy-staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Immutable commit SHA published by CI
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exchange-lab-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Validate immutable image tag
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          case "$IMAGE_TAG" in
+            *[!0-9a-f]*|'') exit 2 ;;
+          esac
+          test "${#IMAGE_TAG}" -ge 12
+      - name: Configure SSH trust
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.STAGING_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy with backup and health gate
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+          SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "cd /opt/exchange-lab && IMAGE_TAG='$IMAGE_TAG' DEPLOY_ENV=staging CONFIRM_ENV=staging ./deploy/release.sh"

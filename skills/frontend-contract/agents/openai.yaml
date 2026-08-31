@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Contract"
+  short_description: "Protect exchange frontend API and WebSocket correctness"
+  default_prompt: "Review or implement frontend API and WebSocket integration with exact decimals, explicit states, validation, and subscription cleanup."

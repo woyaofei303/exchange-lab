@@ -10,12 +10,23 @@ import (
 
 func validValues() map[string]string {
 	return map[string]string{
-		"APP_HTTP_ADDR":      ":8080",
-		"POSTGRES_DSN":       "postgres://exchange:secret@postgres:5432/exchange?sslmode=disable",
-		"REDIS_ADDR":         "redis:6379",
-		"NATS_URL":           "nats://nats:4222",
-		"DEPENDENCY_TIMEOUT": "1s",
-		"SHUTDOWN_TIMEOUT":   "10s",
+		"APP_HTTP_ADDR":        ":8080",
+		"POSTGRES_DSN":         "postgres://exchange:secret@postgres:5432/exchange?sslmode=disable",
+		"POSTGRES_MIN_CONNS":   "1",
+		"POSTGRES_MAX_CONNS":   "10",
+		"DATABASE_TIMEOUT":     "2s",
+		"REDIS_ADDR":           "redis:6379",
+		"CACHE_TIMEOUT":        "200ms",
+		"INSTRUMENT_CACHE_TTL": "5m",
+		"TICKER_CACHE_TTL":     "5s",
+		"NATS_URL":             "nats://nats:4222",
+		"DEPENDENCY_TIMEOUT":   "1s",
+		"REQUEST_TIMEOUT":      "2s",
+		"SHUTDOWN_TIMEOUT":     "10s",
+		"AUTH_SESSION_TTL":     "24h",
+		"AUTH_COOKIE_SECURE":   "false",
+		"LOGIN_RATE_LIMIT":     "5",
+		"LOGIN_RATE_WINDOW":    "10m",
 	}
 }
 
@@ -34,8 +45,28 @@ func TestLoadReturnsValidatedConfig(t *testing.T) {
 	if cfg.HTTPAddr != ":8080" || cfg.RedisAddr != "redis:6379" || cfg.NATSURL != "nats://nats:4222" {
 		t.Fatalf("Load() addresses = %#v", cfg)
 	}
-	if cfg.DependencyTimeout != time.Second || cfg.ShutdownTimeout != 10*time.Second {
-		t.Fatalf("Load() timeouts = %s, %s", cfg.DependencyTimeout, cfg.ShutdownTimeout)
+	if cfg.DependencyTimeout != time.Second || cfg.DatabaseTimeout != 2*time.Second || cfg.RequestTimeout != 2*time.Second || cfg.ShutdownTimeout != 10*time.Second {
+		t.Fatalf("Load() timeouts = dependency %s, database %s, request %s, shutdown %s", cfg.DependencyTimeout, cfg.DatabaseTimeout, cfg.RequestTimeout, cfg.ShutdownTimeout)
+	}
+	if cfg.PostgresMinConns != 1 || cfg.PostgresMaxConns != 10 {
+		t.Fatalf("Load() PostgreSQL limits = min %d max %d", cfg.PostgresMinConns, cfg.PostgresMaxConns)
+	}
+	if cfg.CacheTimeout != 200*time.Millisecond || cfg.InstrumentCacheTTL != 5*time.Minute || cfg.TickerCacheTTL != 5*time.Second {
+		t.Fatalf("Load() cache config = timeout %s instrument %s ticker %s", cfg.CacheTimeout, cfg.InstrumentCacheTTL, cfg.TickerCacheTTL)
+	}
+	if cfg.AuthSessionTTL != 24*time.Hour || cfg.AuthCookieSecure || cfg.LoginRateLimit != 5 || cfg.LoginRateWindow != 10*time.Minute {
+		t.Fatalf("Load() auth config = %#v", cfg)
+	}
+}
+
+func TestLoadDatabaseReturnsOnlyValidatedDatabaseSettings(t *testing.T) {
+	values := validValues()
+	database, err := config.LoadDatabase(lookup(values))
+	if err != nil {
+		t.Fatalf("LoadDatabase() error = %v", err)
+	}
+	if database.PostgresDSN != values["POSTGRES_DSN"] || database.MinConns != 1 || database.MaxConns != 10 || database.Timeout != 2*time.Second {
+		t.Fatalf("LoadDatabase() = %#v", database)
 	}
 }
 
@@ -105,7 +136,19 @@ func TestLoadRejectsInvalidURLsAndTimeouts(t *testing.T) {
 		{name: "postgres scheme", key: "POSTGRES_DSN", value: "mysql://db"},
 		{name: "nats scheme", key: "NATS_URL", value: "http://nats:4222"},
 		{name: "zero dependency timeout", key: "DEPENDENCY_TIMEOUT", value: "0s"},
+		{name: "zero database timeout", key: "DATABASE_TIMEOUT", value: "0s"},
+		{name: "zero max connections", key: "POSTGRES_MAX_CONNS", value: "0"},
+		{name: "negative min connections", key: "POSTGRES_MIN_CONNS", value: "-1"},
+		{name: "min exceeds max", key: "POSTGRES_MIN_CONNS", value: "11"},
+		{name: "invalid request timeout", key: "REQUEST_TIMEOUT", value: "later"},
+		{name: "zero cache timeout", key: "CACHE_TIMEOUT", value: "0s"},
+		{name: "negative instrument cache TTL", key: "INSTRUMENT_CACHE_TTL", value: "-1s"},
+		{name: "invalid ticker cache TTL", key: "TICKER_CACHE_TTL", value: "later"},
 		{name: "negative shutdown timeout", key: "SHUTDOWN_TIMEOUT", value: "-1s"},
+		{name: "short auth session", key: "AUTH_SESSION_TTL", value: "30s"},
+		{name: "invalid secure cookie", key: "AUTH_COOKIE_SECURE", value: "sometimes"},
+		{name: "zero login limit", key: "LOGIN_RATE_LIMIT", value: "0"},
+		{name: "short login window", key: "LOGIN_RATE_WINDOW", value: "500ms"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,5 +294,110 @@ func TestLoadDoesNotLeakInvalidNATSURL(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), secret) || strings.Contains(err.Error(), values["NATS_URL"]) {
 		t.Fatalf("Load() leaked invalid NATS URL: %v", err)
+	}
+}
+
+func TestLoadMarketWorkerReturnsBoundedRuntimeConfig(t *testing.T) {
+	t.Parallel()
+
+	values := map[string]string{
+		"MARKET_WS_URL":             "ws://market-simulator:8090/ws",
+		"MARKET_MAX_MESSAGE_BYTES":  "1048576",
+		"MARKET_MAX_RECONNECTS":     "5",
+		"MARKET_INITIAL_BACKOFF":    "250ms",
+		"MARKET_MAX_BACKOFF":        "5s",
+		"MARKET_HEARTBEAT_INTERVAL": "10s",
+		"MARKET_OPERATION_TIMEOUT":  "2s",
+		"REDIS_ADDR":                "redis:6379",
+		"CACHE_TIMEOUT":             "200ms",
+		"INSTRUMENT_CACHE_TTL":      "5m",
+		"TICKER_CACHE_TTL":          "5s",
+		"NATS_URL":                  "nats://nats:4222",
+	}
+	cfg, err := config.LoadMarketWorker(lookup(values))
+	if err != nil {
+		t.Fatalf("LoadMarketWorker() error = %v", err)
+	}
+	if cfg.WebSocketURL != values["MARKET_WS_URL"] || cfg.MaxMessageBytes != 1<<20 || cfg.MaxReconnects != 5 || cfg.InitialBackoff != 250*time.Millisecond || cfg.MaxBackoff != 5*time.Second {
+		t.Fatalf("LoadMarketWorker() = %#v", cfg)
+	}
+}
+
+func TestLoadMarketWorkerRejectsUnboundedOrSensitiveConfig(t *testing.T) {
+	t.Parallel()
+
+	base := map[string]string{
+		"MARKET_WS_URL": "ws://market-simulator:8090/ws", "MARKET_MAX_MESSAGE_BYTES": "1048576",
+		"MARKET_MAX_RECONNECTS": "5", "MARKET_INITIAL_BACKOFF": "250ms", "MARKET_MAX_BACKOFF": "5s",
+		"MARKET_HEARTBEAT_INTERVAL": "10s", "MARKET_OPERATION_TIMEOUT": "2s", "REDIS_ADDR": "redis:6379",
+		"CACHE_TIMEOUT": "200ms", "INSTRUMENT_CACHE_TTL": "5m", "TICKER_CACHE_TTL": "5s", "NATS_URL": "nats://nats:4222",
+	}
+	tests := map[string][2]string{
+		"http websocket":        {"MARKET_WS_URL", "http://simulator/ws"},
+		"websocket credentials": {"MARKET_WS_URL", "ws://user:secret@simulator/ws"},
+		"oversized message":     {"MARKET_MAX_MESSAGE_BYTES", "16777217"},
+		"unbounded reconnects":  {"MARKET_MAX_RECONNECTS", "0"},
+		"too many reconnects":   {"MARKET_MAX_RECONNECTS", "21"},
+		"backoff inverted":      {"MARKET_INITIAL_BACKOFF", "10s"},
+	}
+	for name, mutation := range tests {
+		name, mutation := name, mutation
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			values := make(map[string]string, len(base))
+			for key, value := range base {
+				values[key] = value
+			}
+			values[mutation[0]] = mutation[1]
+			_, err := config.LoadMarketWorker(lookup(values))
+			if err == nil {
+				t.Fatal("LoadMarketWorker() error = nil")
+			}
+			if strings.Contains(err.Error(), "secret") {
+				t.Fatalf("LoadMarketWorker() leaked value: %v", err)
+			}
+		})
+	}
+}
+
+func TestLoadMarketSimulatorReturnsValidatedConfig(t *testing.T) {
+	t.Parallel()
+
+	values := map[string]string{
+		"SIMULATOR_HTTP_ADDR": ":8090",
+		"SIMULATOR_INTERVAL":  "250ms",
+		"SHUTDOWN_TIMEOUT":    "10s",
+	}
+	cfg, err := config.LoadMarketSimulator(lookup(values))
+	if err != nil {
+		t.Fatalf("LoadMarketSimulator() error = %v", err)
+	}
+	if cfg.HTTPAddr != ":8090" || cfg.Interval != 250*time.Millisecond || cfg.ShutdownTimeout != 10*time.Second {
+		t.Fatalf("LoadMarketSimulator() = %#v", cfg)
+	}
+	values["SIMULATOR_INTERVAL"] = "0s"
+	if _, err := config.LoadMarketSimulator(lookup(values)); err == nil {
+		t.Fatal("LoadMarketSimulator(zero interval) error = nil")
+	}
+}
+
+func TestLoadCandleWorkerReturnsValidatedBoundedConfig(t *testing.T) {
+	t.Parallel()
+
+	values := validValues()
+	values["CANDLE_HTTP_ADDR"] = ":8091"
+	values["CANDLE_PRICE_SCALE"] = "2"
+	values["CANDLE_QUANTITY_SCALE"] = "3"
+	values["CANDLE_OPERATION_TIMEOUT"] = "2s"
+	cfg, err := config.LoadCandleWorker(lookup(values))
+	if err != nil {
+		t.Fatalf("LoadCandleWorker() error = %v", err)
+	}
+	if cfg.HTTPAddr != ":8091" || cfg.PriceScale != 2 || cfg.QuantityScale != 3 || cfg.OperationTimeout != 2*time.Second || cfg.Database.MaxConns != 10 {
+		t.Fatalf("LoadCandleWorker() = %#v", cfg)
+	}
+	values["CANDLE_PRICE_SCALE"] = "19"
+	if _, err := config.LoadCandleWorker(lookup(values)); err == nil {
+		t.Fatal("LoadCandleWorker(invalid scale) error = nil")
 	}
 }

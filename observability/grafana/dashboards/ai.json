@@ -1,0 +1,1 @@
+{"title":"AI","uid":"exchange-ai","schemaVersion":39,"version":1,"panels":[{"type":"timeseries","title":"AI requests","targets":[{"expr":"sum by (status) (rate(exchange_ai_requests_total[5m]))"}],"gridPos":{"h":8,"w":24,"x":0,"y":0}}]}

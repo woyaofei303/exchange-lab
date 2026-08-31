@@ -1,0 +1,84 @@
+// Package risk defines read-only risk, funding and liquidation projections.
+package risk
+
+import "time"
+
+// Snapshot is a versioned server-computed margin and liquidation projection.
+type Snapshot struct {
+	UserID                 int64
+	Symbol                 string
+	Mode                   string
+	Leverage               int64
+	PositionSizeAtoms      int64
+	EntryPriceAtoms        int64
+	MarkPriceAtoms         int64
+	PriceScale             uint8
+	QuantityScale          uint8
+	QuoteScale             uint8
+	PositionMarginAtoms    int64
+	OrderMarginAtoms       int64
+	WalletAvailableAtoms   int64
+	UnrealizedPnLAtoms     int64
+	MarginBalanceAtoms     int64
+	MaintenanceMarginAtoms int64
+	MarginRatioBPS         int64
+	LiquidationDistanceBPS int64
+	RiskVersion            int64
+	Fresh                  bool
+	AsOf                   time.Time
+}
+
+// LiquidationRecord is the read model for one idempotent liquidation job.
+type LiquidationRecord struct {
+	ID                   string    `json:"id"`
+	Symbol               string    `json:"symbol"`
+	Mode                 string    `json:"mode"`
+	Status               string    `json:"status"`
+	MarkPriceAtoms       int64     `json:"mark_price_atoms"`
+	BankruptcyPriceAtoms int64     `json:"bankruptcy_price_atoms"`
+	RiskVersion          int64     `json:"risk_version"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+// FundingRecord is one scheduled or completed funding rate fact.
+type FundingRecord struct {
+	ID               int64     `json:"id"`
+	Symbol           string    `json:"symbol"`
+	FundingTime      time.Time `json:"funding_time"`
+	PredictedRateBPS int64     `json:"predicted_rate_bps"`
+	FinalRateBPS     int64     `json:"final_rate_bps"`
+	MarkPriceAtoms   int64     `json:"mark_price_atoms"`
+	Status           string    `json:"status"`
+}
+
+// FundingPayment is one user's exact signed settlement delta.
+type FundingPayment struct {
+	FundingRateID     int64     `json:"funding_rate_id"`
+	Symbol            string    `json:"symbol"`
+	PositionSizeAtoms int64     `json:"position_size_atoms"`
+	PaymentAtoms      int64     `json:"payment_atoms"`
+	SettledAt         time.Time `json:"settled_at"`
+}
+
+// InsuranceStatus reports the fund balance and unresolved ADL count.
+type InsuranceStatus struct {
+	BalanceAtoms int64
+	ADLPending   int64
+	UpdatedAt    time.Time
+}
+
+// ConditionalOrder is a persisted reduce-only take-profit or stop-loss trigger.
+type ConditionalOrder struct {
+	ID                string    `json:"id"`
+	UserID            int64     `json:"user_id"`
+	Symbol            string    `json:"symbol"`
+	Type              string    `json:"type"`
+	TriggerSource     string    `json:"trigger_source"`
+	TriggerDirection  string    `json:"trigger_direction"`
+	TriggerPriceAtoms int64     `json:"trigger_price_atoms"`
+	QuantityAtoms     int64     `json:"quantity_atoms"`
+	Status            string    `json:"status"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}

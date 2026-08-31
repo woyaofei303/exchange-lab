@@ -1,0 +1,26 @@
+{
+	http_port 8080
+	https_port 8443
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$EXCHANGE_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	reverse_proxy web:3000 {
+		health_uri /healthz
+		health_interval 10s
+		transport http {
+			dial_timeout 2s
+			response_header_timeout 15s
+		}
+	}
+}

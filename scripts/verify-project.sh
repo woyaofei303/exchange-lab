@@ -85,11 +85,11 @@ if ! docker build --quiet -f "$context_dir/Dockerfile" "$context_dir" >"$tempora
 	exit 1
 fi
 
-for excluded_path in .env bin README.md scripts .git unknown-credential.key \
+for excluded_path in .env bin README.md scripts/probe.sh .git unknown-credential.key \
 	internal/testdata/private.key cmd/api/local.pem internal/state/debug.dump; do
 	write_probe_dockerfile "$excluded_path"
 	if docker build --quiet -f "$context_dir/Dockerfile" "$context_dir" >"$temporary_dir/docker-probe.log" 2>&1; then
-		printf '%s\n' 'project check failed: Docker context included a denied path' >&2
+		printf '%s\n' "project check failed: Docker context included denied path: $excluded_path" >&2
 		failures=$((failures + 1))
 	fi
 done

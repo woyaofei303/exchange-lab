@@ -1,0 +1,192 @@
+x-app-image: &app-image ${IMAGE_REPOSITORY:-ghcr.io/woyaofei303/exchange-lab}:${IMAGE_TAG:?IMAGE_TAG must be an immutable commit SHA}
+x-app-hardening: &app-hardening
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  mem_limit: 256m
+  cpus: 1.0
+  restart: unless-stopped
+
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: !reset null
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 2.0
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1.0
+
+  nats:
+    ports: !reset []
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1.0
+
+  migrate:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/migrate, -direction, up, -timeout, 30s]
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+    restart: "no"
+
+  api:
+    <<: *app-hardening
+    image: *app-image
+    build: !reset null
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/api]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: ""
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+      OPENAI_API_KEY: ""
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      AUTH_COOKIE_SECURE: "true"
+    secrets: [postgres_dsn, openai_api_key]
+    networks: [exchange, egress]
+
+  market-simulator:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/market-simulator]
+    ports: !reset []
+
+  market-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/market-worker]
+
+  candle-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/candle-worker]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+
+  event-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/event-worker]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+
+  price-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/price-worker]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+
+  risk-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/risk-worker]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+
+  funding-worker:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/container-entrypoint]
+    command: [/usr/local/bin/funding-worker]
+    ports: !reset []
+    environment:
+      POSTGRES_DSN: !reset null
+      POSTGRES_DSN_FILE: /run/secrets/postgres_dsn
+    secrets: [postgres_dsn]
+
+  web:
+    <<: *app-hardening
+    image: *app-image
+    pull_policy: always
+    entrypoint: [/usr/local/bin/web-gateway]
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    user: 1000:1000
+    environment:
+      EXCHANGE_DOMAIN: ${EXCHANGE_DOMAIN:?EXCHANGE_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    ports:
+      - 80:8080
+      - 443:8443
+      - 443:8443/udp
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web: {condition: service_healthy}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    restart: unless-stopped
+    networks: [exchange, edge]
+
+  prometheus:
+    ports: !reset []
+
+  grafana:
+    ports: !reset []
+
+networks:
+  exchange:
+    internal: true
+  edge:
+  egress:
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  postgres_dsn:
+    file: ${POSTGRES_DSN_SECRET_FILE:-./secrets/postgres_dsn}
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_SECRET_FILE:-./secrets/postgres_password}
+  openai_api_key:
+    file: ${OPENAI_API_KEY_SECRET_FILE:-./secrets/openai_api_key}

@@ -1,0 +1,22 @@
+groups:
+  - name: exchange-contract
+    rules:
+      - alert: MarkPriceStale
+        expr: exchange_mark_price_fresh == 0
+        for: 15s
+        labels: {severity: critical}
+        annotations: {summary: "Authoritative mark price is stale"}
+      - alert: LiquidationBacklog
+        expr: exchange_liquidation_backlog > 0
+        for: 30s
+        labels: {severity: critical}
+        annotations: {summary: "Liquidation jobs are waiting"}
+      - alert: FundingSettlementLag
+        expr: exchange_funding_lag_seconds > 60
+        for: 1m
+        labels: {severity: warning}
+        annotations: {summary: "Funding settlement is delayed"}
+      - alert: ReconciliationFailure
+        expr: increase(exchange_reconciliation_failures_total[5m]) > 0
+        labels: {severity: critical}
+        annotations: {summary: "Financial reconciliation failed"}

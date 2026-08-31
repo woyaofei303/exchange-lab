@@ -1,0 +1,4 @@
+{
+  "*.{ts,tsx}": ["prettier --write", "biome lint --write --no-errors-on-unmatched"],
+  "*.{css,json,html}": "prettier --write"
+}

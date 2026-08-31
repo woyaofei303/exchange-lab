@@ -1,0 +1,1 @@
+{"title":"Trading","uid":"exchange-trading","schemaVersion":39,"version":1,"panels":[{"type":"timeseries","title":"HTTP p95","targets":[{"expr":"histogram_quantile(0.95, sum by (le) (rate(exchange_http_request_duration_seconds_bucket[5m])))"}],"gridPos":{"h":8,"w":24,"x":0,"y":0}}]}

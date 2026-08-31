@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-exchange}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exchange_dev_only}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -20,9 +20,9 @@ services:
 
   redis:
     image: redis:8.4.1-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -36,8 +36,8 @@ services:
     image: nats:2.12.4-alpine
     command: ["--jetstream", "--store_dir", "/data", "--http_port", "8222"]
     ports:
-      - "127.0.0.1:4222:4222"
-      - "127.0.0.1:8222:8222"
+      - "127.0.0.1:${NATS_HOST_PORT:-4222}:4222"
+      - "127.0.0.1:${NATS_MONITOR_HOST_PORT:-8222}:8222"
     volumes:
       - nats_data:/data
     healthcheck:
@@ -47,29 +47,235 @@ services:
       retries: 20
     networks: [exchange]
 
+  market-simulator:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/market-simulator"]
+    environment:
+      SIMULATOR_HTTP_ADDR: :8090
+      SIMULATOR_INTERVAL: ${SIMULATOR_INTERVAL:-250ms}
+      SHUTDOWN_TIMEOUT: 10s
+    ports:
+      - "127.0.0.1:${SIMULATOR_HOST_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8090/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  market-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/market-worker"]
+    environment:
+      MARKET_WS_URL: ws://market-simulator:8090/ws
+      MARKET_MAX_MESSAGE_BYTES: 1048576
+      MARKET_MAX_RECONNECTS: 5
+      MARKET_INITIAL_BACKOFF: 250ms
+      MARKET_MAX_BACKOFF: 5s
+      MARKET_HEARTBEAT_INTERVAL: 10s
+      MARKET_OPERATION_TIMEOUT: 2s
+      REDIS_ADDR: redis:6379
+      CACHE_TIMEOUT: 200ms
+      INSTRUMENT_CACHE_TTL: 5m
+      TICKER_CACHE_TTL: 5s
+      NATS_URL: nats://nats:4222
+    depends_on:
+      market-simulator: {condition: service_healthy}
+      candle-worker: {condition: service_healthy}
+      price-worker: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      nats: {condition: service_healthy}
+    restart: "on-failure:3"
+    networks: [exchange]
+
+  candle-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/candle-worker"]
+    environment:
+      CANDLE_HTTP_ADDR: :8091
+      CANDLE_PRICE_SCALE: 2
+      CANDLE_QUANTITY_SCALE: 3
+      CANDLE_OPERATION_TIMEOUT: 2s
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+      POSTGRES_MIN_CONNS: 1
+      POSTGRES_MAX_CONNS: 4
+      DATABASE_TIMEOUT: 2s
+      NATS_URL: nats://nats:4222
+      SHUTDOWN_TIMEOUT: 10s
+    ports:
+      - "127.0.0.1:${CANDLE_HOST_PORT:-8091}:8091"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      nats: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8091/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "on-failure:3"
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  event-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/event-worker"]
+    environment:
+      EVENT_HTTP_ADDR: :8092
+      EVENT_OPERATION_TIMEOUT: 2s
+      EVENT_POLL_INTERVAL: 200ms
+      EVENT_BATCH_SIZE: 50
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+      NATS_URL: nats://nats:4222
+      SHUTDOWN_TIMEOUT: 10s
+    ports:
+      - "127.0.0.1:${EVENT_HOST_PORT:-8092}:8092"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      nats: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8092/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "on-failure:3"
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  price-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/price-worker"]
+    environment:
+      PRICE_HTTP_ADDR: :8093
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+      NATS_URL: nats://nats:4222
+    ports:
+      - "127.0.0.1:${PRICE_HOST_PORT:-8093}:8093"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      nats: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8093/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "on-failure:3"
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  risk-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/risk-worker"]
+    environment:
+      RISK_HTTP_ADDR: :8094
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+    ports:
+      - "127.0.0.1:${RISK_HOST_PORT:-8094}:8094"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      price-worker: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8094/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "on-failure:3"
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  funding-worker:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/funding-worker"]
+    environment:
+      FUNDING_HTTP_ADDR: :8095
+      FUNDING_INTERVAL: ${FUNDING_INTERVAL:-8h}
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+    ports:
+      - "127.0.0.1:${FUNDING_HOST_PORT:-8095}:8095"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      price-worker: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8095/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    restart: "on-failure:3"
+    stop_grace_period: 15s
+    networks: [exchange]
+
+  migrate:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/migrate"]
+    command: ["-direction", "up", "-timeout", "30s"]
+    environment:
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+      POSTGRES_MIN_CONNS: 0
+      POSTGRES_MAX_CONNS: 2
+      DATABASE_TIMEOUT: 5s
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+    networks: [exchange]
+
   api:
+    image: exchange-lab:local
     build:
       context: .
       dockerfile: Dockerfile
     environment:
       APP_HTTP_ADDR: :8080
       POSTGRES_DSN: ${POSTGRES_DSN:-postgres://exchange:exchange_dev_only@postgres:5432/exchange?sslmode=disable}
+      POSTGRES_MIN_CONNS: 1
+      POSTGRES_MAX_CONNS: 10
+      DATABASE_TIMEOUT: 2s
       REDIS_ADDR: redis:6379
+      CACHE_TIMEOUT: 200ms
+      INSTRUMENT_CACHE_TTL: 5m
+      TICKER_CACHE_TTL: 5s
       NATS_URL: nats://nats:4222
       DEPENDENCY_TIMEOUT: 1s
+      REQUEST_TIMEOUT: 2s
       SHUTDOWN_TIMEOUT: 10s
+      AUTH_SESSION_TTL: ${AUTH_SESSION_TTL:-24h}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-5}
+      LOGIN_RATE_WINDOW: ${LOGIN_RATE_WINDOW:-10m}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     depends_on:
       postgres: {condition: service_started}
       redis: {condition: service_started}
       nats: {condition: service_started}
+      migrate: {condition: service_completed_successfully}
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/readyz"]
       interval: 2s
       timeout: 2s
       retries: 20
     stop_grace_period: 15s
+    networks: [exchange]
+
+  web:
+    image: exchange-lab:local
+    entrypoint: ["/usr/local/bin/web-gateway"]
+    environment:
+      WEB_HTTP_ADDR: :3000
+      WEB_STATIC_DIR: /srv/web
+      WEB_API_URL: http://api:8080
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:3000/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    read_only: true
+    stop_grace_period: 10s
     networks: [exchange]
 
 networks:

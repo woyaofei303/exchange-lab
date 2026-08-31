@@ -1,0 +1,4 @@
+interface:
+  display_name: "WebSocket Reliability"
+  short_description: "Build and review reliable market WebSocket workers"
+  default_prompt: "Use $websocket-reliability to implement or audit a reliable market-data WebSocket worker with bounded reconnect, sequence checks, and deterministic tests."

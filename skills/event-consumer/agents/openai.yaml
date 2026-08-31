@@ -1,0 +1,4 @@
+interface:
+  display_name: "Event Consumer"
+  short_description: "Build safe at-least-once JetStream event flows"
+  default_prompt: "Implement or review this event flow with a transactional outbox, versioned envelope, durable explicit-ack consumer, atomic idempotency, bounded retries, parking, and replay tests."

@@ -1,0 +1,1 @@
+{"title":"Risk","uid":"exchange-risk","schemaVersion":39,"version":1,"panels":[{"type":"timeseries","title":"Liquidation backlog","targets":[{"expr":"exchange_liquidation_backlog"}],"gridPos":{"h":8,"w":12,"x":0,"y":0}},{"type":"stat","title":"Mark price fresh","targets":[{"expr":"exchange_mark_price_fresh"}],"gridPos":{"h":8,"w":12,"x":12,"y":0}}]}

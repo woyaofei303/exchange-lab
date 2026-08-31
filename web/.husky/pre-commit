@@ -1,0 +1,4 @@
+cd web
+npx lint-staged
+npm run typecheck
+npm test

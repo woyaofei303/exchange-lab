@@ -1,3 +1,4 @@
+// Command api starts the public HTTP API and owns its process lifecycle.
 package main
 
 import (
